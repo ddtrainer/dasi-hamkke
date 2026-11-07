@@ -141,7 +141,11 @@ export function Lanterns() {
 }
 
 export function Gate() {
-  const tex = useMemo(() => signTexture('다시 함께'), [])
+  const signTex = useMemo(() => {
+    const t = new THREE.TextureLoader().load(import.meta.env.BASE_URL + 'sign.webp')
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8
+    return t
+  }, [])
   const leaves = useMemo(() => {
     const arr: { p: [number, number, number]; c: string; s: number }[] = []
     const cols = ['#5fbf4a', '#ffb7d1', '#ffffff', '#ffe066', '#b9a8ff', '#7ad05a']
@@ -170,11 +174,12 @@ export function Gate() {
       {leaves.map((l, i) => (
         <mesh key={i} position={l.p}><icosahedronGeometry args={[l.s, 0]} /><meshStandardMaterial color={l.c} flatShading /></mesh>
       ))}
-      <mesh position={[0, 3.55, 0.05]}>
-        <planeGeometry args={[3.4, 1.6]} /><meshBasicMaterial map={tex} toneMapped={false} transparent alphaTest={0.4} />
+      {/* sign artwork (public/sign.webp, 1100x609): drawn on both faces */}
+      <mesh position={[0, 4.15, 0.05]}>
+        <planeGeometry args={[4.5, 2.49]} /><meshBasicMaterial map={signTex} toneMapped={false} transparent alphaTest={0.3} />
       </mesh>
-      <mesh position={[0, 3.55, -0.05]} rotation-y={Math.PI}>
-        <planeGeometry args={[3.4, 1.6]} /><meshBasicMaterial map={tex} toneMapped={false} transparent alphaTest={0.4} />
+      <mesh position={[0, 4.15, -0.05]} rotation-y={Math.PI}>
+        <planeGeometry args={[4.5, 2.49]} /><meshBasicMaterial map={signTex} toneMapped={false} transparent alphaTest={0.3} />
       </mesh>
     </group>
   )
