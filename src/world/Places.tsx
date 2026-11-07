@@ -179,7 +179,7 @@ export function StarHill() {
         {[0, 2.1, 4.2].map((a) => (<mesh key={a} position={[Math.cos(a) * 0.3, 0.55, Math.sin(a) * 0.3]} rotation={[Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3]}><cylinderGeometry args={[0.03, 0.035, 1.15, 5]} /><meshStandardMaterial color="#4a3a2a" /></mesh>))}
         <mesh position={[0, 1.2, 0]} rotation-x={Math.PI / 2 - 0.9}><cylinderGeometry args={[0.13, 0.09, 1.1, 10]} /><meshStandardMaterial color="#2f4f8f" metalness={0.4} roughness={0.5} /></mesh>
       </group>
-      <group position={[c.x + 2.4, terrainHeight(c.x + 2.4, c.z - 1.5), c.z - 1.5]}>
+      <group position={[c.x + 0.2, terrainHeight(c.x + 0.2, c.z + 2.3), c.z + 2.3]}>
         <mesh position={[0, 0.2, 0]}><cylinderGeometry args={[0.18, 0.2, 0.4, 8]} /><meshStandardMaterial color="#5a4a3a" /></mesh>
         <mesh position={[0, 0.5, 0]}><boxGeometry args={[0.24, 0.3, 0.24]} /><meshStandardMaterial ref={lamp} color="#ffd98a" emissive="#ffb84a" emissiveIntensity={0.7} /></mesh>
       </group>
@@ -187,37 +187,53 @@ export function StarHill() {
   )
 }
 
-/** Shooting stars cross the night sky every few seconds. */
+/** Shooting stars: a bright head with a long fading trail streaks across the night sky every few seconds. */
 export function ShootingStars() {
-  const grp = useRef<THREE.Group>(null!)
+  const mesh = useRef<THREE.Mesh>(null!)
   const mat = useRef<THREE.MeshBasicMaterial>(null!)
-  const st = useRef({ next: 3, t: -1, a: 0, el: 0.5 })
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 16
+    const g = c.getContext('2d')!
+    const gr = g.createLinearGradient(0, 0, 256, 0)
+    gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.55, 'rgba(190,215,255,0.3)'); gr.addColorStop(0.9, 'rgba(235,245,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,1)')
+    g.fillStyle = gr; g.beginPath(); g.moveTo(0, 8); g.lineTo(230, 3); g.lineTo(256, 8); g.lineTo(230, 13); g.closePath(); g.fill()
+    const hg = g.createRadialGradient(244, 8, 0, 244, 8, 12); hg.addColorStop(0, 'rgba(255,255,255,1)'); hg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = hg; g.fillRect(228, 0, 28, 16)
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t
+  }, [])
+  const st = useRef({ next: 2.5, t: -1, az: 0, el: 0.8, spin: 0 })
+  if (import.meta.env.DEV) (window as unknown as { __shoot: () => void }).__shoot = () => { st.current.next = 0 }
+  const basisX = useMemo(() => new THREE.Vector3(), [])
+  const basisY = useMemo(() => new THREE.Vector3(), [])
+  const basisZ = useMemo(() => new THREE.Vector3(), [])
+  const m4 = useMemo(() => new THREE.Matrix4(), [])
   useFrame(({ camera }, dt) => {
-    const s = st.current
-    grp.current.position.copy(camera.position)
-    const n = tod.night
-    if (n < 0.6) { grp.current.visible = false; return }
+    const s = st.current, n = tod.night
+    if (n < 0.6) { mesh.current.visible = false; s.t = -1; return }
     s.next -= dt
-    if (s.t < 0 && s.next <= 0) { s.t = 0; s.a = Math.random() * Math.PI * 2; s.el = 0.35 + Math.random() * 0.4; s.next = 4 + Math.random() * 6 }
-    if (s.t >= 0) {
-      s.t += dt * 1.6
-      if (s.t > 1) { s.t = -1; grp.current.visible = false; return }
-      grp.current.visible = true
-      const dist = 700, a0 = s.a + s.t * 0.5
-      const x = Math.cos(a0) * dist * Math.cos(s.el), z = Math.sin(a0) * dist * Math.cos(s.el), y = Math.sin(s.el) * dist - s.t * 120
-      grp.current.children[0].position.set(x, y, z)
-      grp.current.children[0].lookAt(camera.position)
-      grp.current.children[0].rotateZ(0.9)
-      mat.current.opacity = Math.sin(s.t * Math.PI) * 0.95 * n
-    } else grp.current.visible = false
+    if (s.t < 0 && s.next <= 0) { s.t = 0; s.az = Math.random() * Math.PI * 2; s.el = 0.45 + Math.random() * 0.75; s.spin = (Math.random() < 0.5 ? -1 : 1); s.next = 4 + Math.random() * 7 }
+    if (s.t < 0) { mesh.current.visible = false; return }
+    s.t += dt / 1.4
+    if (s.t > 1) { s.t = -1; mesh.current.visible = false; return }
+    const R = 600
+    const dir = new THREE.Vector3(Math.cos(s.az) * Math.cos(s.el), Math.sin(s.el), Math.sin(s.az) * Math.cos(s.el))
+    // travel direction: sideways along the sky and downwards
+    const side = new THREE.Vector3(-Math.sin(s.az), 0, Math.cos(s.az)).multiplyScalar(s.spin)
+    const v = side.clone().add(new THREE.Vector3(0, -0.5, 0)).normalize()
+    const pos = camera.position.clone().addScaledVector(dir, R).addScaledVector(v, (s.t - 0.5) * 360)
+    mesh.current.position.copy(pos)
+    basisZ.copy(camera.position).sub(pos).normalize()
+    basisX.copy(v).addScaledVector(basisZ, -v.dot(basisZ)).normalize()
+    basisY.crossVectors(basisZ, basisX)
+    m4.makeBasis(basisX, basisY, basisZ)
+    mesh.current.quaternion.setFromRotationMatrix(m4)
+    mesh.current.visible = true
+    mat.current.opacity = Math.sin(Math.min(1, s.t * 1.15) * Math.PI) * n
   })
   return (
-    <group ref={grp} visible={false}>
-      <mesh>
-        <planeGeometry args={[70, 1.3]} />
-        <meshBasicMaterial ref={mat} color="#ffffff" transparent opacity={0} depthWrite={false} fog={false} blending={THREE.AdditiveBlending} />
-      </mesh>
-    </group>
+    <mesh ref={mesh} visible={false} renderOrder={-5}>
+      <planeGeometry args={[230, 12]} />
+      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthWrite={false} depthTest={false} fog={false} blending={THREE.AdditiveBlending} />
+    </mesh>
   )
 }
 

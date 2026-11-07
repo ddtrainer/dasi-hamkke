@@ -112,6 +112,7 @@ export function PlayerController() {
     const mag = Math.hypot(ix, iz)
     const manual = mag > 0.12
     if (manual) { cancelAutoWalk(); game.wantSit = false }
+    if (!game.wantSit) game.stargaze = false
     const run = k.has('shift') || game.runToggle || mag > 1.15 || (game.joy.x ** 2 + game.joy.y ** 2) > 0.85
 
     let dirx = 0, dirz = 0, speedMul = 0
@@ -172,6 +173,15 @@ export function PlayerController() {
     if (np !== st.nearPlace) st.set({ nearPlace: np })
 
     // ---------- third-person follow camera with collision ----------
+    if (game.stargaze) {
+      // lying back on the hilltop: the lens sits low behind the player and looks up (drag to look around the sky)
+      const el = clamp(game.camPitch + 0.2, 0.25, 1.45)
+      tmp.set(p.x + Math.sin(game.camYaw) * 2.4, p.y + 0.55, p.z + Math.cos(game.camYaw) * 2.4)
+      camera.position.lerp(tmp, 1 - Math.exp(-dt * 6))
+      look.set(camera.position.x - Math.sin(game.camYaw) * Math.cos(el) * 20, camera.position.y + Math.sin(el) * 20, camera.position.z - Math.cos(game.camYaw) * Math.cos(el) * 20)
+      camera.lookAt(look)
+      return
+    }
     const f = game.camFocus
     const tx = f ? f.x : p.x, ty = f ? f.y + 0.45 : p.y + 1.55, tz = f ? f.z : p.z
     const cp = Math.cos(game.camPitch), sp = Math.sin(game.camPitch)

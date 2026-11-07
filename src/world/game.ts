@@ -16,6 +16,7 @@ export const game = {
   joy: { x: 0, y: 0 },
   runToggle: false,
   wantSit: false,
+  stargaze: false, // lying on the stargazing hill: the camera looks up at the sky
   offerUntil: 0,
   treatUntil: 0,
   dog: { x: 0, y: 0, z: 0 },

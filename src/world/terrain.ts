@@ -94,7 +94,7 @@ export const PLACES = [
   { id: 'dogpark', x: -28.5, z: 10, r: 6.5, icon: '🎾', label: '공 던지기' },
   { id: 'wish', x: -27.6, z: -12, r: 5.5, icon: '🎀', label: '소원 리본 달기' },
   { id: 'cafe', x: -12, z: 51, r: 5, icon: '☕', label: '차 한 잔 마시기' },
-  { id: 'stars', x: 18, z: -38.5, r: 5.5, icon: '🔭', label: '별 보기' },
+  { id: 'stars', x: 33.5, z: -44.5, r: 5.5, icon: '🔭', label: '별 보기' },
 ] as const
 export const BIG_TREE = { x: 10, z: -54 }
 export const WATERFALL = { x: 30, z: -35 }
@@ -136,6 +136,10 @@ function baseHeight(x: number, z: number): number {
       const top = 0.62 + 0.05 * Math.sin(x * 0.45) * Math.sin(z * 0.4)
       h = Math.max(h, -2 + (top + 2) * fade * beachiness(x, z))
     }
+  }
+  { // stargazing hilltop: levelled flat on the highest hill
+    const d = Math.hypot(x - 33.5, z + 44.5)
+    if (d < 9) h += (10 - h) * (1 - sstep(3.8, 9, d))
   }
   { // headland plateau: a levelled hilltop that ends in a cliff
     const d = Math.hypot(x - HEADLAND.x, z - HEADLAND.z)
@@ -224,7 +228,7 @@ Object.assign(NODES, {
   // south: through the plaza just inside the gate (SE2, SE1, G2 are shared with the main paths)
   // west headland: spur from the coastal trail to the lighthouse and the viewpoint at the tip
   // little places off the main paths: dog park, memory forest, café garden, stargazing hill
-  DP: [-34, 10.5], DPc: [-29.8, 10], MF: [-28.6, -11.5], CF: [-12, 47.4], SG: [17.5, -38.5],
+  DP: [-34, 10.5], DPc: [-29.8, 10], MF: [-28.6, -11.5], CF: [-12, 47.4], SG: [31.2, -46.6],
   HL1: [-58.5, -9.6], HL2: [-63.5, -8.2], VP: [-68.6, -7],
   WS1: [-4.5, 40.2], WS2: [-8.4, 42.3], P29: [-15, 45], P30: [-22, 38.1], P31: [-26.8, 31.9], P32: [-30.6, 25.7], P33: [-34.3, 19.8], P34: [-38.4, 14], P35: [-43, 7.6],
 })
@@ -249,7 +253,7 @@ const LOOP_EDGES: [string, string][] = [
   // side trails joining the loop to the inner paths
   ['W3', 'P1'], ['W2', 'P0'],
 ]
-const SPUR_EDGES: [string, string][] = [['P1', 'HL1'], ['HL1', 'HL2'], ['HL2', 'VP'], ['P34', 'DP'], ['DP', 'DPc'], ['W3', 'MF'], ['P29', 'CF'], ['H1', 'SG']]
+const SPUR_EDGES: [string, string][] = [['P1', 'HL1'], ['HL1', 'HL2'], ['HL2', 'VP'], ['P34', 'DP'], ['DP', 'DPc'], ['W3', 'MF'], ['P29', 'CF'], ['P14', 'SG']]
 export const EDGES: [string, string][] = [...MAIN_EDGES, ...LOOP_EDGES, ...SPUR_EDGES]
 export const PATH_SEGS: [V2, V2][] = EDGES.map(([a, b]) => [NODES[a], NODES[b]])
 /** Inner paths only: shrines and benches are placed relative to these, so the coastal trail never moves them. */
@@ -413,5 +417,5 @@ export const DESTINATIONS = {
   dogpark: { label: '반려견 놀이터', p: [-29.8, 10] as V2 },
   wish: { label: '추억의 숲', p: [-28.6, -11.5] as V2 },
   cafe: { label: '카페 정원', p: [-12, 47.4] as V2 },
-  stars: { label: '별 보는 언덕', p: [17.5, -38.5] as V2 },
+  stars: { label: '별 보는 언덕', p: [31.2, -46.6] as V2 },
 }

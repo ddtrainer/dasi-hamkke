@@ -72,9 +72,10 @@ export function placeAction(id: string) {
     return
   }
   if (id === 'stars') {
-    game.wantSit = true
-    if (st.tod !== 'night') { st.set({ tod: 'night' }); st.say('🔭 하늘이 어두워졌어요. 별을 바라봐요. (위의 시간 버튼으로 바꿀 수 있어요)') }
-    else st.say('🌠 별똥별이 지나가면 소원을 빌어 보세요.')
+    if (game.stargaze) { game.wantSit = false; game.stargaze = false; return }
+    game.wantSit = true; game.stargaze = true; game.camPitch = 0.6; game.camYaw = 2.07
+    if (st.tod !== 'night') st.set({ tod: 'night' })
+    st.say('🌌 누워서 밤하늘을 올려다봐요. 드래그로 하늘을 둘러보고, 움직이면 돌아와요. 별똥별에 소원을 빌어 보세요 🌠')
   }
 }
 export const PLACE_BY_ID = Object.fromEntries(PLACES.map((p) => [p.id, p]))

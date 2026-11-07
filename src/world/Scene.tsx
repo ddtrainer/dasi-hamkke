@@ -20,14 +20,42 @@ const skyVert = `varying vec3 vP; void main(){ vP = position; gl_Position = proj
 const skyFrag = `varying vec3 vP;
 uniform vec3 uTop; uniform vec3 uMid; uniform vec3 uHor; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uSunPow; uniform float uStars; uniform float uTime;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+float hash3(vec3 p){ p = fract(p * vec3(0.1031, 0.1030, 0.0973)); p += dot(p, p.yxz + 33.33); return fract((p.x + p.y) * p.z); }
+float vnoise(vec3 p){
+  vec3 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+  return mix(mix(mix(hash3(i), hash3(i+vec3(1,0,0)), f.x), mix(hash3(i+vec3(0,1,0)), hash3(i+vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash3(i+vec3(0,0,1)), hash3(i+vec3(1,0,1)), f.x), mix(hash3(i+vec3(0,1,1)), hash3(i+vec3(1,1,1)), f.x), f.y), f.z);
+}
+float stars(vec3 d, float scale, float thr, float size){
+  vec3 p = d * scale; vec3 id = floor(p); vec3 f = fract(p) - 0.5;
+  vec3 off = (vec3(hash3(id + 1.3), hash3(id + 2.7), hash3(id + 4.1)) - 0.5) * 0.6;
+  return step(thr, hash3(id)) * smoothstep(size, 0.0, length(f - off));
+}
 void main(){
   vec3 d = normalize(vP);
   float h = d.y;
   vec3 c = mix(uHor, uMid, smoothstep(0.0,0.25,h)); c = mix(c, uTop, smoothstep(0.2,0.8,h));
   float sun = pow(max(dot(d, normalize(uSunDir)),0.0), uSunPow);
-  vec2 g = d.xz / (abs(d.y) + 0.35) * 70.0;
-  float st = step(0.988, hash(floor(g))) * smoothstep(0.08, 0.3, h) * (0.6 + 0.4*sin(uTime*2.0 + hash(floor(g))*40.0));
-  gl_FragColor = vec4(c + uSunCol*sun + vec3(st)*uStars, 1.0);
+  vec3 col = c + uSunCol*sun;
+  if (uStars > 0.01) {
+    float up = smoothstep(0.0, 0.2, h);
+    // round, jittered stars from 3D cells (no pole distortion), a slow twinkle on the brighter ones
+    float s1 = stars(d, 55.0, 0.93, 0.34) * (0.65 + 0.35*sin(uTime*2.0 + hash3(floor(d*55.0))*40.0));
+    float s2 = stars(d, 130.0, 0.92, 0.36) * 0.6;
+    // the Milky Way: a tilted band with a bright bulge, dust lanes and a dense carpet of faint stars
+    vec3 gn = normalize(vec3(0.64, 0.15, 0.75));
+    float lat = dot(d, gn);
+    float band = exp(-lat*lat / 0.03);
+    float core = pow(max(dot(d, normalize(vec3(-0.62, 0.5, 0.52))), 0.0), 4.0);
+    float cloud = vnoise(d*7.0) * 0.6 + vnoise(d*16.0) * 0.3 + vnoise(d*38.0) * 0.1;
+    float lane = smoothstep(0.52, 0.78, vnoise(d*10.0 + 4.0)) * (1.0 - smoothstep(0.0, 0.55, max(abs(lat) - 0.02, 0.0)));
+    vec3 mwCol = mix(vec3(0.40, 0.48, 0.85), vec3(1.0, 0.84, 0.66), core * 0.8);
+    float mw = band * (0.15 + 0.9*cloud*cloud*1.6) * (1.0 - 0.8*lane) * (0.5 + 0.9*core);
+    float carpet = stars(d, 300.0, 0.78 - 0.10*band, 0.42) * band * (1.0 - 0.6*lane);
+    col += (mwCol * mw * 1.15 + vec3(carpet) * 0.9) * uStars * up;
+    col += vec3(s1 + s2) * uStars * up;
+  }
+  gl_FragColor = vec4(col, 1.0);
 }`
 
 type Env = {
@@ -49,6 +77,7 @@ const PRESETS: Record<string, Env> = {
   night: mk({ top: '#05092a', mid: '#0f1740', hor: '#242e5c', sun: [-0.4, 0.5, -0.7], sunCol: '#c4d4ff', sunPow: 1800, stars: 1, hemiSky: '#4e64a6', hemiGround: '#222d50', hemiI: 1.0, amb: '#6a7ab0', ambI: 0.4, dir: '#a9bcff', dirI: 0.8, off: [-25, 40, 20], fog: '#141a38', tint: '#47598c', night: 1, dusk: 0 }),
 }
 const env: Env = mk(DAY)
+if (import.meta.env.DEV) (window as unknown as { __env: Env }).__env = env
 const lerpEnv = (a: Env, b: Env, k: number) => {
   for (const key of ['top', 'mid', 'hor', 'sunCol', 'hemiSky', 'hemiGround', 'ambCol', 'dirCol', 'fog', 'tint'] as const) a[key].lerp(b[key], k)
   a.sunDir.lerp(b.sunDir, k); a.dirOff.lerp(b.dirOff, k)
@@ -70,18 +99,22 @@ function TimeOfDay() {
 
 function Sky() {
   const ref = useRef<THREE.Mesh>(null!)
+  const matRef = useRef<THREE.ShaderMaterial>(null!)
   const u = useMemo(() => ({
     uTop: { value: env.top }, uMid: { value: env.mid }, uHor: { value: env.hor }, uSunDir: { value: env.sunDir }, uSunCol: { value: env.sunCol },
     uSunPow: { value: 220 }, uStars: { value: 0 }, uTime: { value: 0 },
   }), [])
   useFrame(({ camera }, dt) => {
     ref.current.position.copy(camera.position)
-    u.uSunPow.value = env.sunPow; u.uStars.value = env.stars; u.uTime.value += dt
+    // write through the material's own uniforms (the material may hold copies of the objects passed in)
+    const mu = matRef.current.uniforms
+    mu.uTop.value.copy(env.top); mu.uMid.value.copy(env.mid); mu.uHor.value.copy(env.hor); mu.uSunDir.value.copy(env.sunDir); mu.uSunCol.value.copy(env.sunCol)
+    mu.uSunPow.value = env.sunPow; mu.uStars.value = env.stars; mu.uTime.value += dt
   })
   return (
     <mesh ref={ref} renderOrder={-10}>
       <sphereGeometry args={[900, 24, 12]} />
-      <shaderMaterial uniforms={u} vertexShader={skyVert} fragmentShader={lin(skyFrag)} side={THREE.BackSide} depthWrite={false} fog={false} />
+      <shaderMaterial ref={matRef} uniforms={u} vertexShader={skyVert} fragmentShader={lin(skyFrag)} side={THREE.BackSide} depthWrite={false} fog={false} />
     </mesh>
   )
 }

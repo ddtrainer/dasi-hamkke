@@ -98,14 +98,15 @@ export const cafe = (() => {
 /** stargazing hill: blanket, telescope and a lantern */
 export const stargaze = (() => {
   const c = place('stars')
-  return { c, blanket: [c.x + 0.8, c.z + 0.2] as V2, scope: [c.x - 1.6, c.z - 1.0] as V2 }
+  return { c, blanket: [c.x + 0.9, c.z - 0.4] as V2, scope: [c.x + 2.3, c.z - 1.6] as V2 }
 })()
 COLLIDERS.push({ x: stargaze.scope[0], z: stargaze.scope[1], r: 0.5 })
 
 // a cherry tree behind every memorial shrine
 for (const s of SLOTS) {
   const bx = s.x - Math.sin(s.ry) * 3.9, bz = s.z - Math.cos(s.ry) * 3.9
-  if (canStand(bx, bz) && distToPath(bx, bz) > 2.2) addTree(bx, bz, 1.5 + rnd() * 0.5, 'cherry')
+  const nearStars = Math.hypot(bx - place('stars').x, bz - place('stars').z) < 8 // keep the stargazing hilltop open to the sky
+  if (!nearStars && canStand(bx, bz) && distToPath(bx, bz) > 2.2) addTree(bx, bz, 1.5 + rnd() * 0.5, 'cherry')
   COLLIDERS.push({ x: s.x, z: s.z, r: 1.55 })
 }
 

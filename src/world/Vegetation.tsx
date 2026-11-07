@@ -220,6 +220,7 @@ export function Petals({ count }: { count: number }) {
     return { p, v }
   }, [count])
   useFrame((_, dt) => {
+    ref.current.visible = tod.night < 0.5 // no drifting blossom specks against the night sky
     const a = ref.current.geometry.attributes.position as THREE.BufferAttribute
     const { p, v } = st
     for (let i = 0; i < count; i++) {
@@ -253,7 +254,7 @@ export function Clouds() {
       parts: Array.from({ length: 5 }, () => [(r() - 0.5) * 1.8, (r() - 0.5) * 0.3, (r() - 0.5) * 0.8, 0.5 + r() * 0.5] as const),
     }))
   }, [])
-  useFrame((_, dt) => { g.current.position.x += dt * 1.2; if (g.current.position.x > 260) g.current.position.x = -260; cloudMat.color.copy(tod.tint.value); cloudMat.opacity = 0.95 * (1 - 0.75 * tod.night) })
+  useFrame((_, dt) => { g.current.position.x += dt * 1.2; if (g.current.position.x > 260) g.current.position.x = -260; cloudMat.color.copy(tod.tint.value); cloudMat.opacity = 0.95 * (1 - 0.75 * tod.night); g.current.visible = tod.night < 0.5 })
   return (
     <group ref={g}>
       {puffs.map((c, i) => (
