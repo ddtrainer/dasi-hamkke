@@ -1,0 +1,43 @@
+import { game, startAutoWalk, cancelAutoWalk } from './game'
+import { SLOTS, planRoute, routeThrough, DESTINATIONS, V2, NODES, LOOP_IDS } from './terrain'
+import { useStore } from '../lib/store'
+
+export function walkTo(p: V2, label?: string, then?: () => void) {
+  const route = planRoute([game.pos.x, game.pos.z], p)
+  startAutoWalk(route, then)
+  if (label) useStore.getState().say(`${label}(으)로 이동합니다. 조작하면 멈춰요.`)
+}
+export function goToSlot(slot: number) {
+  const st = useStore.getState()
+  const s = SLOTS[slot]
+  const m = st.memorials.find((x) => x.slot === slot)
+  const open = () => {
+    if (m) useStore.getState().set({ openId: m.id })
+    else useStore.getState().set({ registerSlot: slot })
+  }
+  const near = Math.hypot(game.pos.x - s.front[0], game.pos.z - s.front[1]) < 1.2
+  if (near) return open()
+  walkTo(s.front, m ? `${m.petName}의 분향소` : '비어 있는 분향소 자리', () => {
+    // face the shrine on arrival
+    game.heading = s.ry + Math.PI
+    open()
+  })
+}
+export function goToDestination(k: keyof typeof DESTINATIONS) {
+  walkTo(DESTINATIONS[k].p, DESTINATIONS[k].label, k === 'market' ? () => useStore.getState().set({ marketOpen: true }) : undefined)
+}
+/** Gentle 'stroll' tour around the main park paths. */
+export function stroll() {
+  const ids = ['G2', 'S0', 'R0', 'R2', 'R4', 'R6', 'R8', 'N1', 'H1', 'H2', 'HT', 'H2', 'N1', 'N3', 'W6', 'W5', 'W4', 'W3', 'W2', 'W1', 'R12', 'R10', 'R8', 'R6', 'NE1', 'NE2', 'BRC', 'BRE', 'GZ1', 'GZ2', 'GZ3', 'GZ', 'GZ1', 'BRE', 'SE8', 'SE6', 'SE4', 'SE2', 'G2', 'S0', 'R0']
+  startAutoWalk(routeThrough(ids, [game.pos.x, game.pos.z]))
+  useStore.getState().say('산책로를 따라 천천히 걸어요. 조작하면 멈춰요.')
+}
+/** Walk once all the way around the island on the coastal trail (the dog follows), starting from the nearest point of the trail. */
+export function loopWalk() {
+  let bi = 0, bd = Infinity
+  LOOP_IDS.forEach((id, i) => { const d = Math.hypot(NODES[id][0] - game.pos.x, NODES[id][1] - game.pos.z); if (d < bd) { bd = d; bi = i } })
+  const ids = [...LOOP_IDS.slice(bi), ...LOOP_IDS.slice(0, bi), LOOP_IDS[bi]]
+  startAutoWalk(routeThrough(ids, [game.pos.x, game.pos.z]))
+  useStore.getState().say('반려견과 함께 섬을 한 바퀴 걸어요. 조작하면 멈춰요.')
+}
+export function stopWalk() { cancelAutoWalk() }
