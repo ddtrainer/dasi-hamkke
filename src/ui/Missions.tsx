@@ -25,25 +25,63 @@ function useReward(id: MissionId) {
   return { done, win, tickets }
 }
 
+// Breathing guide ported from 숨핏 (soomfit-21day template.html): step list -> cycle length -> phase / orb size / count from elapsed time.
+type BStep = { label: string; sub: string; cue: 'in' | 'hold' | 'out'; s: number; to: number }
+const B_IN = { label: '들이마시기', sub: '코로 편안하게 들이마셔요', cue: 'in' as const }
+const B_HOLD = { label: '멈추기', sub: '편안하게 숨을 멈춰 보세요', cue: 'hold' as const }
+const B_OUT = { label: '길게 내쉬기', sub: '입으로 천천히 후~', cue: 'out' as const }
+const BREATHS: Record<string, { lv: string; title: string; cycles: number; steps: BStep[] }> = {
+  basic: { lv: '기본', title: '4-6 호흡', cycles: 6, steps: [{ ...B_IN, s: 4, to: 0.92 }, { ...B_OUT, s: 6, to: 0.42 }] },
+  mid: { lv: '중급', title: '4-4-6 호흡', cycles: 5, steps: [{ ...B_IN, s: 4, to: 0.92 }, { ...B_HOLD, s: 4, to: 0.92 }, { ...B_OUT, s: 6, to: 0.42 }] },
+  adv: { lv: '고급', title: '4-7-8 호흡', cycles: 4, steps: [{ ...B_IN, s: 4, to: 0.92 }, { ...B_HOLD, s: 7, to: 0.92, sub: '편안하게 숨을 멈춰 보세요. 힘들면 쉬어도 괜찮아요' }, { ...B_OUT, s: 8, to: 0.42 }] },
+}
+const cycleOf = (k: string) => BREATHS[k].steps.reduce((x, p) => x + p.s, 0)
+
 function Breath({ onWin }: { onWin: () => void }) {
-  const CYCLES = 3, IN = 4, OUT = 6
-  const [t, setT] = useState<number | null>(null) // seconds elapsed
+  const [kind, setKind] = useState<'basic' | 'mid' | 'adv'>('basic')
+  const [t, setT] = useState<number | null>(null) // elapsed seconds (fractional)
   const fin = useRef(false)
+  const B = BREATHS[kind], cycle = cycleOf(kind), total = cycle * B.cycles
   useEffect(() => {
     if (t === null) return
-    if (t >= CYCLES * (IN + OUT)) { if (!fin.current) { fin.current = true; onWin() } return }
-    const h = window.setTimeout(() => setT(t + 1), 1000)
-    return () => clearTimeout(h)
-  }, [t, onWin])
-  const sec = t === null ? 0 : t % (IN + OUT)
-  const inhale = sec < IN
-  const left = t === null ? CYCLES : Math.max(0, CYCLES - Math.floor(t / (IN + OUT)))
-  const finished = t !== null && t >= CYCLES * (IN + OUT)
+    const t0 = performance.now() - t * 1000
+    const h = window.setInterval(() => {
+      const el = (performance.now() - t0) / 1000
+      if (el >= total) { clearInterval(h); setT(total); if (!fin.current) { fin.current = true; onWin() } } else setT(el)
+    }, 60)
+    return () => clearInterval(h)
+  }, [t === null, total]) // eslint-disable-line react-hooks/exhaustive-deps
+  const finished = t !== null && t >= total
+  let orb = 0.42, label = '', sub = '', num = 0, n = 0
+  if (t !== null && !finished) {
+    n = Math.floor(t / cycle); let x = t % cycle, from = 0.42
+    for (let i = 0; i < B.steps.length; i++) {
+      const p = B.steps[i]
+      if (x < p.s || i === B.steps.length - 1) {
+        const u = Math.min(1, x / p.s), e = u * u * (3 - 2 * u)
+        orb = from + (p.to - from) * e; label = p.label; sub = p.sub
+        num = p.cue !== 'out' ? Math.min(p.s, Math.floor(x) + 1) : Math.max(1, Math.ceil(p.s - x)) // in/hold count up, out counts down
+        break
+      }
+      x -= p.s; from = p.to
+    }
+  }
   return (
     <div className="mg">
-      <div className={'breath' + (t !== null && !finished ? (inhale ? ' in' : ' out') : '')}>🌊</div>
-      {t === null && <button className="btn primary big" onClick={() => setT(0)}>시작하기</button>}
-      {t !== null && !finished && <p className="mg-say">{inhale ? '들이쉬어요… 🌬️' : '천천히 내쉬어요… 🍃'}<br /><small>남은 횟수 {left}</small></p>}
+      {t === null && (
+        <>
+          <div className="seg">{Object.entries(BREATHS).map(([k, v]) => (<button key={k} className={'tab' + (kind === k ? ' on' : '')} onClick={() => setKind(k as 'basic' | 'mid' | 'adv')}>{v.lv} · {v.title}</button>))}</div>
+          <div className="breath" style={{ transform: 'scale(1)' }}>🌊</div>
+          <p className="mg-say"><small>{B.title}을 {B.cycles}번 이어서 해요 (약 {total}초).<br />어지러우면 바로 멈추고 편하게 숨 쉬어요.</small></p>
+          <button className="btn primary big" onClick={() => { fin.current = false; setT(0) }}>시작하기</button>
+        </>
+      )}
+      {t !== null && !finished && (
+        <>
+          <div className="breath" style={{ transform: `scale(${(orb / 0.42).toFixed(3)})`, transition: 'none' }}><b className="breath-num">{num}</b></div>
+          <p className="mg-say"><b>{label}</b><br /><small>{sub}</small><br /><small>호흡 {Math.min(n + 1, B.cycles)} / {B.cycles}</small></p>
+        </>
+      )}
       {finished && <p className="mg-say">잘했어요. 마음이 한결 가벼워졌길 바라요 💕</p>}
     </div>
   )

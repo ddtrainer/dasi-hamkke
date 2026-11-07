@@ -153,3 +153,8 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 .run-ring::before { content: ''; position: absolute; inset: 10px; border-radius: 50%; background: #fffdf8; }
 .run-ring span { position: relative; font-size: 2rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
 .run-ring small { font-size: .75rem; font-weight: 400; color: #8a7b68; }
+
+.seg { display: flex; gap: 6px; width: 100%; flex-wrap: wrap; }
+.seg .tab { font-size: .8rem; }
+.breath { width: 110px; height: 110px; margin: 40px 0; }
+.breath-num { font-size: 1.6rem; color: #35607a; }
