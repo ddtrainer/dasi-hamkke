@@ -7,7 +7,7 @@ export const game = {
   pos: { x: 0, y: 1.7, z: 106 },
   heading: Math.PI, // facing -z (towards the island)
   camYaw: 0, // camera looks along -z when 0 (behind player at +z)
-  camPitch: 0.32,
+  camPitch: 0.36,
   camDist: 7.5,
   anim: 'idle' as Anim,
   speed: 0,

@@ -8,6 +8,7 @@ import { footstep } from '../lib/audio'
 import { trees } from './layout'
 import { useStore } from '../lib/store'
 
+const cam = { init: false, tx: 0, ty: 0, tz: 0, dist: 7.5, dragAt: -99 }
 const tmp = new THREE.Vector3()
 const look = new THREE.Vector3()
 
@@ -33,6 +34,7 @@ export function useInputListeners() {
       if (!drag || e.pointerId !== drag.id) return
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y
       drag.x = e.clientX; drag.y = e.clientY
+      cam.dragAt = game.time
       game.camYaw -= dx * 0.0055
       game.camPitch = clamp(game.camPitch + dy * 0.0045, -0.1, 1.2)
     }
@@ -80,6 +82,7 @@ if (import.meta.env.DEV) (window as unknown as { __game: typeof game }).__game =
 
 export function PlayerController() {
   const { camera } = useThree()
+  if (import.meta.env.DEV) (window as unknown as { __cam: THREE.Camera }).__cam = camera
   useInputListeners()
 
   useFrame((_, dtRaw) => {
@@ -183,30 +186,50 @@ export function PlayerController() {
       return
     }
     const f = game.camFocus
-    const tx = f ? f.x : p.x, ty = f ? f.y + 0.45 : p.y + 1.55, tz = f ? f.z : p.z
+    const fx0 = f ? f.x : p.x, fy0 = f ? f.y + 0.45 : p.y + 1.55, fz0 = f ? f.z : p.z
+    // film-style chase camera: a smoothed target, a smoothed distance and a gentle swing round to the back of a walking player
+    if (!cam.init || f) { cam.tx = fx0; cam.ty = fy0; cam.tz = fz0; cam.dist = game.camDist; cam.init = true }
+    else {
+      const kx = 1 - Math.exp(-dt * 7), ky = 1 - Math.exp(-dt * 3.5)
+      cam.tx += (fx0 - cam.tx) * kx; cam.tz += (fz0 - cam.tz) * kx; cam.ty += (fy0 - cam.ty) * ky
+    }
+    const walkingForward = game.route.length > 0 || (mag > 0.12 && iz < -0.25 && Math.abs(ix) < 0.5)
+    if (!f && walkingForward && moved && game.time - cam.dragAt > 1.6) {
+      const want = game.heading + Math.PI
+      const diff = Math.atan2(Math.sin(want - game.camYaw), Math.cos(want - game.camYaw))
+      game.camYaw += diff * (1 - Math.exp(-dt * 1.1))
+    }
+    const tx = cam.tx, ty = cam.ty, tz = cam.tz
     const cp = Math.cos(game.camPitch), sp = Math.sin(game.camPitch)
     const ox = Math.sin(game.camYaw) * cp, oy = sp, oz = Math.cos(game.camYaw) * cp
-    let dist = game.camDist
-    for (; dist > 1.2; dist -= 0.4) {
-      const cx = tx + ox * dist, cy = ty + oy * dist, cz = tz + oz * dist
+    // how far back the lens may sit: trunks and the ground can pull it in, blossom canopies only down to a comfortable minimum
+    let dA = game.camDist
+    for (; dA > 1.6; dA -= 0.4) {
+      const cx = tx + ox * dA, cy = ty + oy * dA, cz = tz + oz * dA
       if (cy < groundHeight(cx, cz) + 0.5) continue
       let hit = false
       for (const c of COLLIDERS) {
         if (c.r < 0.35) continue
         if (Math.hypot(cx - c.x, cz - c.z) < c.r + 0.2 && cy < groundHeight(c.x, c.z) + 2.4) { hit = true; break }
       }
-      if (!hit) {
-        // keep the lens out of blossom canopies
-        for (const t of trees) {
-          const dx = cx - t.x, dz = cz - t.z
-          if (dx * dx + dz * dz > (3.0 * t.s) ** 2) continue
-          if (cy > t.y + 1.3 * t.s && cy < t.y + 5.4 * t.s) { hit = true; break }
-        }
+      if (!hit) break
+    }
+    let allowed = dA
+    for (; allowed > Math.min(dA, 4.6); allowed -= 0.4) {
+      const cx = tx + ox * allowed, cy = ty + oy * allowed, cz = tz + oz * allowed
+      let hit = false
+      for (const t of trees) {
+        const dx = cx - t.x, dz = cz - t.z
+        if (dx * dx + dz * dz > (3.0 * t.s) ** 2) continue
+        if (cy > t.y + 1.3 * t.s && cy < t.y + 5.4 * t.s) { hit = true; break }
       }
       if (!hit) break
     }
-    tmp.set(tx + ox * dist, ty + oy * dist, tz + oz * dist)
-    camera.position.lerp(tmp, 1 - Math.exp(-dt * 12))
+    // pull in briskly but let go slowly, so the picture never pumps in and out
+    cam.dist += (allowed - cam.dist) * (1 - Math.exp(-dt * (allowed < cam.dist ? 2.2 : 0.8)))
+    tmp.set(tx + ox * cam.dist, ty + oy * cam.dist, tz + oz * cam.dist)
+    tmp.y = Math.max(tmp.y, groundHeight(tmp.x, tmp.z) + 0.55)
+    camera.position.copy(tmp)
     look.set(tx, ty - 0.15, tz)
     camera.lookAt(look)
   })
