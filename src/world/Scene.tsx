@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../lib/store'
@@ -8,46 +8,102 @@ import { Flowers, Grass } from './Flora'
 import { EffectComposer, Bloom, Vignette, ToneMapping, SMAA } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { Structures } from './Structures'
+import { Reeds } from './Landmarks'
+import { Places, ShootingStars } from './Places'
 import { Shrines } from './Shrines'
 import { Market } from './Market'
 import { Avatar, Dog } from './Characters'
 import { PlayerController } from './Player'
-import { game, fx, lin } from './game'
+import { game, fx, lin, tod } from './game'
 
 const skyVert = `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);} `
 const skyFrag = `varying vec3 vP;
+uniform vec3 uTop; uniform vec3 uMid; uniform vec3 uHor; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uSunPow; uniform float uStars; uniform float uTime;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
 void main(){
-  float h = normalize(vP).y;
-  vec3 top = vec3(0.28,0.6,1.0), mid = vec3(0.56,0.8,1.0), hor = vec3(0.92,0.97,1.0);
-  vec3 c = mix(hor, mid, smoothstep(0.0,0.25,h)); c = mix(c, top, smoothstep(0.2,0.8,h));
-  float sun = pow(max(dot(normalize(vP), normalize(vec3(0.5,0.6,-0.6))),0.0), 220.0);
-  gl_FragColor = vec4(c + vec3(1.0,0.95,0.8)*sun, 1.0);
+  vec3 d = normalize(vP);
+  float h = d.y;
+  vec3 c = mix(uHor, uMid, smoothstep(0.0,0.25,h)); c = mix(c, uTop, smoothstep(0.2,0.8,h));
+  float sun = pow(max(dot(d, normalize(uSunDir)),0.0), uSunPow);
+  vec2 g = d.xz / (abs(d.y) + 0.35) * 70.0;
+  float st = step(0.988, hash(floor(g))) * smoothstep(0.08, 0.3, h) * (0.6 + 0.4*sin(uTime*2.0 + hash(floor(g))*40.0));
+  gl_FragColor = vec4(c + uSunCol*sun + vec3(st)*uStars, 1.0);
 }`
+
+type Env = {
+  top: THREE.Color; mid: THREE.Color; hor: THREE.Color; sunDir: THREE.Vector3; sunCol: THREE.Color; sunPow: number; stars: number
+  hemiSky: THREE.Color; hemiGround: THREE.Color; hemiI: number; ambCol: THREE.Color; ambI: number; dirCol: THREE.Color; dirI: number; dirOff: THREE.Vector3
+  fog: THREE.Color; tint: THREE.Color; night: number; dusk: number
+}
+const C = (hex: string) => new THREE.Color(hex)
+interface EnvSpec { top: string; mid: string; hor: string; sun: [number, number, number]; sunCol: string; sunPow: number; stars: number; hemiSky: string; hemiGround: string; hemiI: number; amb: string; ambI: number; dir: string; dirI: number; off: [number, number, number]; fog: string; tint: string; night: number; dusk: number }
+const mk = (o: EnvSpec): Env => ({
+  top: C(o.top), mid: C(o.mid), hor: C(o.hor), sunDir: new THREE.Vector3(...o.sun), sunCol: C(o.sunCol), sunPow: o.sunPow, stars: o.stars,
+  hemiSky: C(o.hemiSky), hemiGround: C(o.hemiGround), hemiI: o.hemiI, ambCol: C(o.amb), ambI: o.ambI, dirCol: C(o.dir), dirI: o.dirI, dirOff: new THREE.Vector3(...o.off),
+  fog: C(o.fog), tint: C(o.tint), night: o.night, dusk: o.dusk,
+})
+const DAY: EnvSpec = { top: '#48a0ff', mid: '#8fccff', hor: '#ebf8ff', sun: [0.5, 0.6, -0.6], sunCol: '#ffeccc', sunPow: 220, stars: 0, hemiSky: '#eef7ff', hemiGround: '#e3f3b8', hemiI: 1.55, amb: '#fff6ea', ambI: 0.25, dir: '#fff1d8', dirI: 1.55, off: [30, 45, 25], fog: '#e9f5ff', tint: '#ffffff', night: 0, dusk: 0 }
+const PRESETS: Record<string, Env> = {
+  day: mk(DAY),
+  sunset: mk({ top: '#4d4d9e', mid: '#f28c73', hor: '#ffc78c', sun: [0.55, 0.1, -0.8], sunCol: '#ff9a4d', sunPow: 60, stars: 0, hemiSky: '#ffd7b8', hemiGround: '#c98c70', hemiI: 1.1, amb: '#ffd0b0', ambI: 0.24, dir: '#ff9d55', dirI: 1.3, off: [46, 15, 20], fog: '#f3c9a8', tint: '#ffd1b8', night: 0, dusk: 1 }),
+  night: mk({ top: '#05092a', mid: '#0f1740', hor: '#242e5c', sun: [-0.4, 0.5, -0.7], sunCol: '#c4d4ff', sunPow: 1800, stars: 1, hemiSky: '#4e64a6', hemiGround: '#222d50', hemiI: 1.0, amb: '#6a7ab0', ambI: 0.4, dir: '#a9bcff', dirI: 0.8, off: [-25, 40, 20], fog: '#141a38', tint: '#47598c', night: 1, dusk: 0 }),
+}
+const env: Env = mk(DAY)
+const lerpEnv = (a: Env, b: Env, k: number) => {
+  for (const key of ['top', 'mid', 'hor', 'sunCol', 'hemiSky', 'hemiGround', 'ambCol', 'dirCol', 'fog', 'tint'] as const) a[key].lerp(b[key], k)
+  a.sunDir.lerp(b.sunDir, k); a.dirOff.lerp(b.dirOff, k)
+  for (const key of ['sunPow', 'stars', 'hemiI', 'ambI', 'dirI', 'night', 'dusk'] as const) a[key] += (b[key] - a[key]) * k
+}
+
+/** Eases sky, light, fog and the unlit shader tint towards the chosen time of day (day / sunset / night). */
+function TimeOfDay() {
+  const scene = useThree((s) => s.scene)
+  useFrame((_, dt) => {
+    const target = PRESETS[useStore.getState().tod]
+    lerpEnv(env, target, 1 - Math.exp(-Math.min(dt, 0.1) * 1.8))
+    tod.night = env.night; tod.dusk = env.dusk
+    tod.tint.value.copy(env.tint)
+    if (scene.fog) (scene.fog as THREE.Fog).color.copy(env.fog)
+  })
+  return null
+}
 
 function Sky() {
   const ref = useRef<THREE.Mesh>(null!)
-  useFrame(({ camera }) => ref.current.position.copy(camera.position))
+  const u = useMemo(() => ({
+    uTop: { value: env.top }, uMid: { value: env.mid }, uHor: { value: env.hor }, uSunDir: { value: env.sunDir }, uSunCol: { value: env.sunCol },
+    uSunPow: { value: 220 }, uStars: { value: 0 }, uTime: { value: 0 },
+  }), [])
+  useFrame(({ camera }, dt) => {
+    ref.current.position.copy(camera.position)
+    u.uSunPow.value = env.sunPow; u.uStars.value = env.stars; u.uTime.value += dt
+  })
   return (
     <mesh ref={ref} renderOrder={-10}>
       <sphereGeometry args={[900, 24, 12]} />
-      <shaderMaterial vertexShader={skyVert} fragmentShader={lin(skyFrag)} side={THREE.BackSide} depthWrite={false} fog={false} />
+      <shaderMaterial uniforms={u} vertexShader={skyVert} fragmentShader={lin(skyFrag)} side={THREE.BackSide} depthWrite={false} fog={false} />
     </mesh>
   )
 }
 
 function Lights({ shadows }: { shadows: boolean }) {
   const dir = useRef<THREE.DirectionalLight>(null!)
+  const hemi = useRef<THREE.HemisphereLight>(null!)
+  const amb = useRef<THREE.AmbientLight>(null!)
   useFrame(() => {
     if (!dir.current) return
     const p = game.pos
-    dir.current.position.set(p.x + 30, p.y + 45, p.z + 25)
+    dir.current.position.set(p.x + env.dirOff.x, p.y + env.dirOff.y, p.z + env.dirOff.z)
     dir.current.target.position.set(p.x, p.y, p.z)
     dir.current.target.updateMatrixWorld()
+    dir.current.color.copy(env.dirCol); dir.current.intensity = env.dirI
+    hemi.current.color.copy(env.hemiSky); hemi.current.groundColor.copy(env.hemiGround); hemi.current.intensity = env.hemiI
+    amb.current.color.copy(env.ambCol); amb.current.intensity = env.ambI
   })
   return (
     <>
-      <hemisphereLight args={['#eef7ff', '#e3f3b8', 1.55]} />
-      <ambientLight intensity={0.25} color="#fff6ea" />
+      <hemisphereLight ref={hemi} args={['#eef7ff', '#e3f3b8', 1.55]} />
+      <ambientLight ref={amb} intensity={0.25} color="#fff6ea" />
       <directionalLight ref={dir} intensity={1.55} color="#fff1d8" castShadow={shadows}
         shadow-mapSize={[2048, 2048]} shadow-camera-left={-28} shadow-camera-right={28} shadow-camera-top={28} shadow-camera-bottom={-28}
         shadow-camera-near={1} shadow-camera-far={140} shadow-bias={-0.0006} />
@@ -95,6 +151,7 @@ export function World() {
         scene.fog = new THREE.Fog('#e9f5ff', 70, 400)
       }}
     >
+      <TimeOfDay />
       <Sky />
       <Lights shadows={hi} />
       <Sea />
@@ -105,7 +162,10 @@ export function World() {
       <Flowers density={hi ? 1 : 0.45} />
       <Grass count={hi ? 5200 : 1800} />
       <Rocks />
+      <Reeds />
       <Structures />
+      <Places />
+      <ShootingStars />
       <Shrines />
       <Market />
       <Avatar />

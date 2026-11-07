@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useStore, IS_MOBILE } from '../lib/store'
 import { game } from '../world/game'
 import { interactNearest, toggleSit } from '../world/Player'
-import { goToSlot, goToDestination, stroll, loopWalk, stopWalk } from '../world/actions'
+import { goToSlot, goToDestination, stroll, loopWalk, stopWalk, PLACE_BY_ID } from '../world/actions'
 import { DESTINATIONS, SLOTS } from '../world/terrain'
 import { setMusic, setSfx } from '../lib/audio'
 
@@ -33,7 +33,7 @@ function Joystick() {
 }
 
 export function Hud() {
-  const { phase, nearSlot, nearMarket, memorials, userId, sfx, music, quality, menuOpen, set, toast } = useStore()
+  const { phase, nearSlot, nearMarket, nearPlace, memorials, userId, sfx, music, quality, menuOpen, tod, set, toast } = useStore()
   const near = nearSlot !== null ? memorials.find((m) => m.slot === nearSlot) : undefined
   const mine = memorials.filter((m) => m.ownerId === userId)
   useEffect(() => { setSfx(sfx) }, [sfx])
@@ -48,6 +48,7 @@ export function Hud() {
         <button className="chip" onClick={() => set({ menuOpen: !menuOpen })}>🧭 이동</button>
         <button className="chip" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
         <span className="sp" />
+        <button className="chip" onClick={() => set({ tod: tod === 'day' ? 'sunset' : tod === 'sunset' ? 'night' : 'day' })} aria-label="시간대">{tod === 'day' ? '☀️ 낮' : tod === 'sunset' ? '🌇 노을' : '🌙 밤'}</button>
         <button className={'chip' + (sfx ? ' on' : '')} onClick={() => set({ sfx: !sfx })} aria-label="효과음">{sfx ? '🔊' : '🔇'}</button>
         <button className={'chip' + (music ? ' on' : '')} onClick={() => set({ music: !music })} aria-label="배경음악">🎵</button>
         <button className="chip" onClick={() => set({ quality: quality === 'high' ? 'low' : 'high' })}>{quality === 'high' ? '고화질' : '절약'}</button>
@@ -74,6 +75,9 @@ export function Hud() {
       )}
       {nearSlot === null && nearMarket && (
         <button className="interact" onClick={interactNearest}>🛍️ 다시 함께 마켓 열기 <kbd>E</kbd></button>
+      )}
+      {nearSlot === null && !nearMarket && nearPlace && PLACE_BY_ID[nearPlace] && (
+        <button className="interact" onClick={interactNearest}>{PLACE_BY_ID[nearPlace].icon} {PLACE_BY_ID[nearPlace].label} <kbd>E</kbd></button>
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
       {IS_MOBILE || matchMedia('(pointer: coarse)').matches ? (

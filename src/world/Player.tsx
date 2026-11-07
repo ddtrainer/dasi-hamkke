@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { game, cancelAutoWalk } from './game'
-import { groundHeight, moveWithCollision, canStand, COLLIDERS, SLOTS, clamp, MARKET } from './terrain'
+import { groundHeight, moveWithCollision, canStand, COLLIDERS, SLOTS, clamp, MARKET, PLACES } from './terrain'
+import { placeAction } from './actions'
 import { footstep } from '../lib/audio'
 import { trees } from './layout'
 import { useStore } from '../lib/store'
@@ -61,7 +62,11 @@ export function interactNearest() {
   if (st.openId && !st.memorials.some((x) => x.id === st.openId)) st.set({ openId: null })
   else if (st.openId) return
   if (st.registerSlot !== undefined) return
-  if (st.nearSlot === null) { if (st.nearMarket && !st.marketOpen) st.set({ marketOpen: true }); return }
+  if (st.nearSlot === null) {
+    if (st.nearMarket && !st.marketOpen) st.set({ marketOpen: true })
+    else if (!st.nearMarket && st.nearPlace) placeAction(st.nearPlace)
+    return
+  }
   const m = st.memorials.find((x) => x.slot === st.nearSlot)
   if (m) st.set({ openId: m.id }); else st.set({ registerSlot: st.nearSlot })
 }
@@ -162,6 +167,9 @@ export function PlayerController() {
     if (near !== lastNear) { lastNear = near; st.set({ nearSlot: near }) }
     const nm = Math.hypot(p.x - MARKET.front[0], p.z - MARKET.front[1]) < 4.6
     if (nm !== st.nearMarket) st.set({ nearMarket: nm })
+    let np: string | null = null
+    for (const q of PLACES) if (Math.hypot(p.x - q.x, p.z - q.z) < q.r) { np = q.id; break }
+    if (np !== st.nearPlace) st.set({ nearPlace: np })
 
     // ---------- third-person follow camera with collision ----------
     const f = game.camFocus

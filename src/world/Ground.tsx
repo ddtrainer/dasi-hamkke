@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { terrainHeight, distToPath, PATH_HALF_W, sstep, POND, POND_WATER_Y, STREAM, GATE, shoreRadius } from './terrain'
-import { game, lin } from './game'
+import { terrainHeight, distToPath, PATH_HALF_W, sstep, POND, POND_WATER_Y, STREAM, GATE, shoreRadius, zoneWeight } from './terrain'
+import { game, lin, tod } from './game'
 
 const SIZE = 160
 
@@ -29,6 +29,7 @@ export function Terrain({ segs }: { segs: number }) {
     const col = new Float32Array(pos.count * 3)
     const c = new THREE.Color()
     const grassA = new THREE.Color('#93e064'), grassB = new THREE.Color('#b4ee7c'), sand = new THREE.Color('#f6e7bb')
+    const autumnC = new THREE.Color('#d6bd5a'), cosmosC = new THREE.Color('#c7e98a')
     const pathC = new THREE.Color('#ead7ad'), rock = new THREE.Color('#9a958c'), wet = new THREE.Color('#d6bf8a')
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i)
@@ -36,6 +37,8 @@ export function Terrain({ segs }: { segs: number }) {
       pos.setY(i, h)
       const n = 0.5 + 0.5 * Math.sin(x * 0.7) * Math.cos(z * 0.63) + 0.15 * Math.sin(x * 2.3 + z * 1.9)
       c.copy(grassA).lerp(grassB, THREE.MathUtils.clamp(n, 0, 1))
+      c.lerp(autumnC, 0.62 * zoneWeight('autumn', x, z))
+      c.lerp(cosmosC, 0.35 * zoneWeight('cosmos', x, z))
       c.lerp(sand, 1 - sstep(0.85, 1.25, h))
       c.lerp(wet, 1 - sstep(-0.3, 0.42, h))
       // slope -> rock
@@ -63,7 +66,7 @@ const seaVert = `
 varying vec3 vW;
 void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`
 const seaFrag = `
-uniform float uTime; varying vec3 vW;
+uniform float uTime; uniform vec3 uTint; varying vec3 vW;
 float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
 float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
   return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
@@ -78,7 +81,7 @@ void main(){
   col += vec3(1.0)*sp*1.4;
   float foam = smoothstep(0.0,1.0, n(vW.xz*0.8 + uTime*0.2)) * (1.0 - smoothstep(55.0, 62.0, r)) * smoothstep(48.0,54.0,r);
   col = mix(col, vec3(1.0), foam*0.18);
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(col * uTint, 1.0);
 }`
 
 export function Sea() {
@@ -87,7 +90,7 @@ export function Sea() {
   return (
     <mesh rotation-x={-Math.PI / 2} position-y={0}>
       <circleGeometry args={[420, 64]} />
-      <shaderMaterial ref={mat} uniforms={{ uTime: { value: 0 } }} vertexShader={seaVert} fragmentShader={lin(seaFrag)} />
+      <shaderMaterial ref={mat} uniforms={{ uTime: { value: 0 }, uTint: tod.tint }} vertexShader={seaVert} fragmentShader={lin(seaFrag)} />
     </mesh>
   )
 }
@@ -97,7 +100,7 @@ const waveVert = `
 attribute float aD; attribute float aA; varying float vD; varying float vA;
 void main(){ vD = aD; vA = aA; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`
 const waveFrag = `
-uniform float uTime; varying float vD; varying float vA;
+uniform float uTime; uniform vec3 uTint; varying float vD; varying float vA;
 void main(){
   float sh = 1.0 - smoothstep(0.0, 8.0, vD);
   vec3 col = mix(vec3(0.62, 0.95, 0.9), vec3(0.42, 0.86, 0.95), smoothstep(0.0, 8.0, vD));
@@ -108,7 +111,7 @@ void main(){
   float foam = clamp(edge * 0.85 + crest, 0.0, 1.0);
   col = mix(col, vec3(1.0), foam);
   a = max(a, foam * 0.8 * (1.0 - smoothstep(0.0, 7.5, vD)));
-  gl_FragColor = vec4(col, a);
+  gl_FragColor = vec4(col * uTint, a);
 }`
 export function ShoreWaves() {
   const mat = useRef<THREE.ShaderMaterial>(null!)
@@ -136,18 +139,18 @@ export function ShoreWaves() {
   useFrame((_, dt) => { mat.current.uniforms.uTime.value += dt })
   return (
     <mesh geometry={geo} renderOrder={1}>
-      <shaderMaterial ref={mat} uniforms={{ uTime: { value: 0 } }} vertexShader={waveVert} fragmentShader={lin(waveFrag)} transparent depthWrite={false} side={THREE.DoubleSide} />
+      <shaderMaterial ref={mat} uniforms={{ uTime: { value: 0 }, uTint: tod.tint }} vertexShader={waveVert} fragmentShader={lin(waveFrag)} transparent depthWrite={false} side={THREE.DoubleSide} />
     </mesh>
   )
 }
 
 const streamFrag = `
-uniform float uTime; varying vec2 vUv;
+uniform float uTime; uniform vec3 uTint; varying vec2 vUv;
 void main(){
   float f = sin(vUv.y*60.0 - uTime*3.0 + sin(vUv.x*12.0)*2.0)*0.5+0.5;
   vec3 c = mix(vec3(0.35,0.78,0.95), vec3(0.75,0.95,1.0), f*0.6);
   float edge = smoothstep(0.0,0.25,vUv.x)*smoothstep(1.0,0.75,vUv.x);
-  gl_FragColor = vec4(c, 0.9*edge);
+  gl_FragColor = vec4(c * uTint, 0.9*edge);
 }`
 const streamVert = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `
 
@@ -190,7 +193,7 @@ export function Water() {
   return (
     <group>
       <mesh geometry={ribbon}>
-        <shaderMaterial ref={smat} uniforms={{ uTime: { value: 0 } }} vertexShader={streamVert} fragmentShader={lin(streamFrag)} transparent side={THREE.DoubleSide} depthWrite={false} />
+        <shaderMaterial ref={smat} uniforms={{ uTime: { value: 0 }, uTint: tod.tint }} vertexShader={streamVert} fragmentShader={lin(streamFrag)} transparent side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       <mesh position={[POND.x, POND_WATER_Y, POND.z]} rotation-x={-Math.PI / 2}>
         <circleGeometry args={[POND.r + 3.5, 40]} />

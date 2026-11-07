@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { trees, rocks } from './layout'
 import { mulberry32 } from './terrain'
-import { game } from './game'
+import { game, tod } from './game'
 
 
 export function swayPatch(mat: THREE.Material, amp: number, speed: number, off = 0.6) {
@@ -48,7 +48,7 @@ function blossom(g: CanvasRenderingContext2D, x: number, y: number, r: number, p
   g.restore()
 }
 const rr = (a: number, b: number) => a + Math.random() * (b - a)
-type Kind = 'cherry' | 'white' | 'green'
+type Kind = 'cherry' | 'white' | 'green' | 'autumn'
 function foliageTexture(kind: Kind) {
   const S = 512
   const c = document.createElement('canvas'); c.width = c.height = S
@@ -56,6 +56,10 @@ function foliageTexture(kind: Kind) {
   const greens = ['#7fcf62', '#8fdc70', '#a0e582', '#74c457', '#9ae07b']
   if (kind === 'green') {
     for (let i = 0; i < 170; i++) leafPath(g, rr(30, S - 30), rr(30, S - 30), rr(0, 6.28), rr(34, 62), greens[i % 5], '#5aa845')
+  } else if (kind === 'autumn') {
+    const warm = ['#ff9a2e', '#f26a22', '#ffcb3d', '#e84a2a', '#ffb347', '#f08a2b']
+    for (let i = 0; i < 175; i++) leafPath(g, rr(30, S - 30), rr(30, S - 30), rr(0, 6.28), rr(34, 62), warm[i % warm.length], '#8a4a1a')
+    for (let i = 0; i < 14; i++) leafPath(g, rr(30, S - 30), rr(30, S - 30), rr(0, 6.28), rr(30, 46), '#9fb84a', '#6c8a30')
   } else {
     for (let i = 0; i < 45; i++) leafPath(g, rr(30, S - 30), rr(30, S - 30), rr(0, 6.28), rr(30, 50), greens[i % 5], '#5aa845')
     const pet = kind === 'cherry' ? ['#ffc2da', '#ffb0cf', '#ffd3e4', '#ffa6c7'] : ['#ffffff', '#fff6f0', '#fdeff4']
@@ -95,21 +99,21 @@ function cardCluster() {
 export function Trees() {
   const trunk = useRef<THREE.InstancedMesh>(null!)
   const branchRef = useRef<THREE.InstancedMesh>(null!)
-  const leafRefs = { cherry: useRef<THREE.InstancedMesh>(null!), white: useRef<THREE.InstancedMesh>(null!), green: useRef<THREE.InstancedMesh>(null!) }
+  const leafRefs = { cherry: useRef<THREE.InstancedMesh>(null!), white: useRef<THREE.InstancedMesh>(null!), green: useRef<THREE.InstancedMesh>(null!), autumn: useRef<THREE.InstancedMesh>(null!) }
   const mats = useRef<Record<string, THREE.MeshStandardMaterial>>({})
   const assets = useMemo(() => ({
     cluster: cardCluster(), bark: barkTexture(),
-    tex: { cherry: foliageTexture('cherry'), white: foliageTexture('white'), green: foliageTexture('green') },
+    tex: { cherry: foliageTexture('cherry'), white: foliageTexture('white'), green: foliageTexture('green'), autumn: foliageTexture('autumn') },
   }), [])
   const data = useMemo(() => {
     const tm: THREE.Matrix4[] = [], br: THREE.Matrix4[] = []
-    const lf: Record<Kind, { m: THREE.Matrix4; c: THREE.Color }[]> = { cherry: [], white: [], green: [] }
+    const lf: Record<Kind, { m: THREE.Matrix4; c: THREE.Color }[]> = { cherry: [], white: [], green: [], autumn: [] }
     const o = new THREE.Object3D()
     const up = new THREE.Vector3(0, 1, 0)
     for (const t of trees) {
       const r = mulberry32(Math.floor(t.seed * 1e9))
       const s = t.s
-      const green = t.kind === 'green'
+      const green = t.kind === 'green' || t.kind === 'autumn'
       const trunkH = (green ? 2.1 : 2.4) * s
       o.position.set(t.x, t.y + trunkH / 2 - 0.1, t.z); o.rotation.set((r() - 0.5) * 0.08, r() * 6, (r() - 0.5) * 0.08)
       o.scale.set(s * 0.3, trunkH, s * 0.3); o.updateMatrix(); tm.push(o.matrix.clone())
@@ -156,7 +160,7 @@ export function Trees() {
     data.tm.forEach((m, i) => trunk.current.setMatrixAt(i, m))
     data.br.forEach((m, i) => branchRef.current.setMatrixAt(i, m))
     trunk.current.instanceMatrix.needsUpdate = true; branchRef.current.instanceMatrix.needsUpdate = true
-    for (const k of ['cherry', 'white', 'green'] as Kind[]) {
+    for (const k of ['cherry', 'white', 'green', 'autumn'] as Kind[]) {
       const im = leafRefs[k].current
       data.lf[k].forEach((b, i) => { im.setMatrixAt(i, b.m); im.setColorAt(i, b.c) })
       im.instanceMatrix.needsUpdate = true
@@ -174,7 +178,7 @@ export function Trees() {
         <cylinderGeometry args={[0.5, 1, 1, 6]} />
         <meshStandardMaterial map={assets.bark} roughness={1} />
       </instancedMesh>
-      {(['cherry', 'white', 'green'] as Kind[]).map((k) => (
+      {(['cherry', 'white', 'green', 'autumn'] as Kind[]).map((k) => (
         <instancedMesh key={k} ref={leafRefs[k]} args={[assets.cluster, undefined, data.lf[k].length]} castShadow frustumCulled={false}>
           <meshStandardMaterial ref={(m) => { if (m) { mats.current[k] = m; swayPatch(m, 0.02, 1.4) } }}
             map={assets.tex[k]} alphaTest={0.45} side={THREE.DoubleSide} roughness={1} emissive="#fff4f4" emissiveIntensity={0.16} />
@@ -241,6 +245,7 @@ export function Petals({ count }: { count: number }) {
 /** Slowly drifting clouds. */
 export function Clouds() {
   const g = useRef<THREE.Group>(null!)
+  const cloudMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.95, fog: false }), [])
   const puffs = useMemo(() => {
     const r = mulberry32(7)
     return Array.from({ length: 14 }, () => ({
@@ -248,7 +253,7 @@ export function Clouds() {
       parts: Array.from({ length: 5 }, () => [(r() - 0.5) * 1.8, (r() - 0.5) * 0.3, (r() - 0.5) * 0.8, 0.5 + r() * 0.5] as const),
     }))
   }, [])
-  useFrame((_, dt) => { g.current.position.x += dt * 1.2; if (g.current.position.x > 260) g.current.position.x = -260 })
+  useFrame((_, dt) => { g.current.position.x += dt * 1.2; if (g.current.position.x > 260) g.current.position.x = -260; cloudMat.color.copy(tod.tint.value); cloudMat.opacity = 0.95 * (1 - 0.75 * tod.night) })
   return (
     <group ref={g}>
       {puffs.map((c, i) => (
@@ -256,7 +261,7 @@ export function Clouds() {
           {c.parts.map((p, j) => (
             <mesh key={j} position={[p[0], p[1], p[2]]} scale={[p[3], p[3] * 0.7, p[3]]}>
               <icosahedronGeometry args={[1, 1]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={0.95} fog={false} />
+              <primitive object={cloudMat} attach="material" />
             </mesh>
           ))}
         </group>

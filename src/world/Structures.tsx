@@ -1,9 +1,10 @@
+import { Lighthouse, ViewDeck } from './Landmarks'
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { BRIDGE, GATE, STREAM_BRIDGE, terrainHeight, GAZEBO } from './terrain'
 import { benches, lanterns, fencePosts } from './layout'
-import { game, lin } from './game'
+import { game, lin, tod } from './game'
 
 const STONE = '#e9e2d4'
 const STONE_D = '#cfc6b4'
@@ -119,11 +120,20 @@ export function Bridge() {
 
 export function Lanterns() {
   const lights = useRef<THREE.InstancedMesh>(null!)
+  const halos = useRef<THREE.InstancedMesh>(null!)
+  const lamp = useRef<THREE.MeshStandardMaterial>(null!)
+  const haloMat = useRef<THREE.MeshBasicMaterial>(null!)
   useEffect(() => {
     const o = new THREE.Object3D()
-    lanterns.forEach((l, i) => { o.position.set(l.x, l.y + 1.25, l.z); o.updateMatrix(); lights.current.setMatrixAt(i, o.matrix) })
-    lights.current.instanceMatrix.needsUpdate = true
+    lanterns.forEach((l, i) => { o.position.set(l.x, l.y + 1.25, l.z); o.updateMatrix(); lights.current.setMatrixAt(i, o.matrix); halos.current.setMatrixAt(i, o.matrix) })
+    lights.current.instanceMatrix.needsUpdate = true; halos.current.instanceMatrix.needsUpdate = true
   }, [])
+  useFrame(() => {
+    const n = Math.max(tod.night, tod.dusk * 0.8)
+    lamp.current.emissiveIntensity = 1.4 + 2.4 * n
+    haloMat.current.opacity = 0.28 * n
+    halos.current.visible = n > 0.02
+  })
   return (
     <group>
       {lanterns.map((l, i) => (
@@ -134,7 +144,11 @@ export function Lanterns() {
       ))}
       <instancedMesh ref={lights} args={[undefined, undefined, lanterns.length]}>
         <boxGeometry args={[0.22, 0.32, 0.22]} />
-        <meshStandardMaterial color="#ffd98a" emissive="#ffb84a" emissiveIntensity={1.4} />
+        <meshStandardMaterial ref={lamp} color="#ffd98a" emissive="#ffb84a" emissiveIntensity={1.4} />
+      </instancedMesh>
+      <instancedMesh ref={halos} args={[undefined, undefined, lanterns.length]} frustumCulled={false} visible={false}>
+        <sphereGeometry args={[0.95, 10, 8]} />
+        <meshBasicMaterial ref={haloMat} color="#ffc95e" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} fog={false} />
       </instancedMesh>
     </group>
   )
@@ -232,7 +246,7 @@ export function Gazebo() {
   )
 }
 
-const fallFrag = `uniform float uTime; varying vec2 vUv;
+const fallFrag = `uniform float uTime; uniform vec3 uTint; varying vec2 vUv;
 float h(float x){ return fract(sin(x*91.3)*437.5); }
 void main(){
   float streak = h(floor(vUv.x*14.0));
@@ -240,7 +254,7 @@ void main(){
   float a = smoothstep(0.0,0.4,f)*0.5 + 0.45;
   vec3 c = mix(vec3(0.6,0.85,1.0), vec3(1.0), f*0.7);
   float edge = smoothstep(0.0,0.15,vUv.x)*smoothstep(1.0,0.85,vUv.x);
-  gl_FragColor = vec4(c, a*edge);
+  gl_FragColor = vec4(c * uTint, a*edge);
 }`
 /** Waterfall: an animated ribbon hugging the hill slope + boulders around the cliff. */
 export function Waterfall() {
@@ -280,7 +294,7 @@ export function Waterfall() {
   return (
     <group>
       <mesh geometry={geo}>
-        <shaderMaterial ref={mat} uniforms={{ uTime: { value: 0 } }} vertexShader="varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}" fragmentShader={lin(fallFrag)} transparent side={THREE.DoubleSide} depthWrite={false} />
+        <shaderMaterial ref={mat} uniforms={{ uTime: { value: 0 }, uTint: tod.tint }} vertexShader="varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}" fragmentShader={lin(fallFrag)} transparent side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       {boulders.map((b, i) => (
         <mesh key={i} position={b.p} scale={[b.s, b.s * 0.85, b.s]} rotation-y={i}><dodecahedronGeometry args={[1, 0]} /><meshStandardMaterial color={i % 2 ? '#a9a49a' : '#97928a'} flatShading roughness={1} /></mesh>
@@ -312,5 +326,5 @@ export function Fence() {
 
 export function Structures() {
   void game
-  return (<><Bridge /><Gate /><Lanterns /><Benches /><StreamBridge /><Gazebo /><Waterfall /><Fence /></>)
+  return (<><Bridge /><Gate /><Lanterns /><Benches /><StreamBridge /><Gazebo /><Waterfall /><Fence /><Lighthouse /><ViewDeck /></>)
 }

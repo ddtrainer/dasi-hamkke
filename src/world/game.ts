@@ -1,4 +1,5 @@
 // Mutable per-frame game state shared between 3D components (kept out of React state on purpose).
+import * as THREE from 'three'
 import type { V2 } from './terrain'
 
 export type Anim = 'idle' | 'walk' | 'run' | 'sit' | 'offer'
@@ -18,6 +19,8 @@ export const game = {
   offerUntil: 0,
   treatUntil: 0,
   dog: { x: 0, y: 0, z: 0 },
+  // fetch: a thrown ball, chased and brought back by the dog
+  ball: { s: 'none' as 'none' | 'fly' | 'rest' | 'carry', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 },
   camFocus: null as null | { x: number; y: number; z: number }, // debug/photo mode: look at something else
   // auto-walk
   route: [] as V2[],
@@ -40,3 +43,6 @@ export function lin(frag: string) {
   const i = frag.lastIndexOf('}')
   return frag.slice(0, i) + 'gl_FragColor.rgb = pow(max(gl_FragColor.rgb, vec3(0.0)), vec3(2.2));' + frag.slice(i)
 }
+
+/** Time of day, smoothed by <TimeOfDay/>: night / dusk are 0..1 blend factors (used by lamps, the lighthouse and the sea shaders). */
+export const tod = { night: 0, dusk: 0, tint: { value: new THREE.Color(1, 1, 1) } }

@@ -213,14 +213,26 @@ export function Dog() {
     const p = game.pos
     if (!s.init) { s.x = p.x + 0.5; s.z = p.z + 0.9; s.init = true }
     // stays close: just behind and a little to the side of the player
-    const tx = p.x - Math.sin(game.heading) * 0.75 + Math.cos(game.heading) * 0.42
-    const tz = p.z - Math.cos(game.heading) * 0.75 - Math.sin(game.heading) * 0.42
+    let tx = p.x - Math.sin(game.heading) * 0.75 + Math.cos(game.heading) * 0.42
+    let tz = p.z - Math.cos(game.heading) * 0.75 - Math.sin(game.heading) * 0.42
+    // fetch: run to the ball, pick it up, bring it back to the player
+    const ball = game.ball
+    let chase = false
+    if (ball.s === 'fly' || ball.s === 'rest') {
+      chase = true; tx = ball.x; tz = ball.z
+      if (ball.s === 'rest' && Math.hypot(s.x - ball.x, s.z - ball.z) < 0.55) ball.s = 'carry'
+    } else if (ball.s === 'carry') {
+      chase = true
+      const ax = s.x - p.x, az = s.z - p.z, al = Math.hypot(ax, az) || 1
+      tx = p.x + (ax / al) * 1.0; tz = p.z + (az / al) * 1.0
+      if (al < 1.5) { ball.s = 'none'; game.treatUntil = game.time + 2.2; useStore.getState().say('🎾 잘했어요! 공을 물어 왔어요 💕') }
+    }
     let dx = tx - s.x, dz = tz - s.z
     let d = Math.hypot(dx, dz)
-    if (d > 6) { s.x = p.x - Math.sin(game.heading) * 1.0; s.z = p.z - Math.cos(game.heading) * 1.0; dx = dz = d = 0 }
+    if (!chase && d > 6) { s.x = p.x - Math.sin(game.heading) * 1.0; s.z = p.z - Math.cos(game.heading) * 1.0; dx = dz = d = 0 }
     let moving = false
     if (d > 0.15) {
-      const sp = Math.min(9, 1.8 + d * 7) * dt
+      const sp = Math.min(chase ? 8 : 9, 1.8 + d * 7) * dt
       const [nx, nz] = moveWithCollision(s.x, s.z, (dx / d) * sp, (dz / d) * sp)
       if (nx !== s.x || nz !== s.z) moving = true
       const want = Math.atan2(nx - s.x || dx, nz - s.z || dz)

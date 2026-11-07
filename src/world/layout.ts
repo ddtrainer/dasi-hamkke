@@ -1,11 +1,11 @@
 // Deterministic placement of vegetation / props. Pure (no three.js).
 // Fixed positions are traced from the reference illustration; the rest is filled in procedurally.
 import {
-  COLLIDERS, SLOTS, POND, MARKET, marketToWorld, HILLS, mulberry32, terrainHeight, groundHeight, distToPath, nearestPathPoint, canStand,
+  COLLIDERS, SLOTS, POND, MARKET, ISLETS, LIGHTHOUSE, VIEWPOINT, HEADLAND, zoneWeight, PLACES, marketToWorld, HILLS, mulberry32, terrainHeight, groundHeight, distToPath, nearestPathPoint, canStand,
   distToPolyline, STREAM, GATE, PATH_SEGS, shoreRadius, snapToPath, GAZEBO, BIG_TREE, FENCE, WATERFALL, V2, NODES, LOOP_IDS, beachiness,
 } from './terrain'
 
-export interface TreeDef { x: number; y: number; z: number; s: number; kind: 'cherry' | 'white' | 'green'; seed: number }
+export interface TreeDef { x: number; y: number; z: number; s: number; kind: 'cherry' | 'white' | 'green' | 'autumn'; seed: number }
 export interface PropDef { x: number; y: number; z: number; ry: number }
 export interface FlowerDef { x: number; y: number; z: number; c: number; s: number }
 
@@ -16,9 +16,12 @@ export const lanterns: PropDef[] = []
 export const rocks: { x: number; y: number; z: number; s: number; ry: number }[] = []
 export const flowers: FlowerDef[] = []
 export const fencePosts: V2[] = []
+export const reeds: { x: number; y: number; z: number; s: number }[] = []
 
 const reserved: { x: number; z: number; r: number }[] = []
 for (const s of SLOTS) reserved.push({ x: s.front[0], z: s.front[1], r: 3.2 }, { x: s.x, z: s.z, r: 3.2 })
+reserved.push({ x: LIGHTHOUSE.x, z: LIGHTHOUSE.z, r: 5.5 }, { x: VIEWPOINT.x, z: VIEWPOINT.z, r: 4.5 })
+for (const pl of PLACES) reserved.push({ x: pl.x, z: pl.z, r: pl.r + 1.5 })
 reserved.push({ x: MARKET.x - 2, z: MARKET.z, r: 8.5 }, { x: GAZEBO.x, z: GAZEBO.z, r: 5 }, { x: GATE.x, z: GATE.z, r: 8 }, { x: WATERFALL.x, z: WATERFALL.z, r: 3 })
 
 function free(x: number, z: number, minPath: number, r = 0.8) {
@@ -49,6 +52,55 @@ addTree(0, 0, 2.7, 'white')
 COLLIDERS[COLLIDERS.length - 1].r = 1.4
 addTree(BIG_TREE.x, BIG_TREE.z, 2.4, 'green')
 COLLIDERS[COLLIDERS.length - 1].r = 1.3
+
+// ---- small places ----
+const place = (id: string) => PLACES.find((q) => q.id === id)!
+/** dog park: a low fence ring (open towards the path in the west), agility hoops, a tunnel and a doghouse */
+export const dogPark = (() => {
+  const c = place('dogpark')
+  const hoops: V2[] = [[c.x + 1.6, c.z - 2.2], [c.x + 3.2, c.z + 0.6]]
+  const tunnel: V2 = [c.x - 0.8, c.z + 3.2]
+  const house: V2 = [c.x + 3.6, c.z - 3.4]
+  const R = 5.4
+  const n = Math.round((2 * Math.PI * R) / 1.8)
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2
+    if (Math.abs(Math.atan2(Math.sin(a - Math.PI), Math.cos(a - Math.PI))) < 0.55) continue // gate side
+    const x = c.x + Math.cos(a) * R, z = c.z + Math.sin(a) * R
+    if (canStand(x, z)) { fencePosts.push([x, z]); COLLIDERS.push({ x, z, r: 0.3 }) }
+  }
+  for (const [x, z] of hoops) COLLIDERS.push({ x, z, r: 0.35 })
+  COLLIDERS.push({ x: tunnel[0], z: tunnel[1], r: 0.9 }, { x: house[0], z: house[1], r: 1.0 })
+  return { c, hoops, tunnel, house }
+})()
+/** memory forest: a ring of small trees around a memorial stone; wish ribbons hang from them */
+export const wishForest = (() => {
+  const c = place('wish')
+  const R = 4.2
+  const spots: V2[] = []
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + 0.2
+    if (Math.abs(Math.atan2(Math.sin(a - Math.PI), Math.cos(a - Math.PI))) < 0.6) continue // opening towards the path
+    const x = c.x + Math.cos(a) * R, z = c.z + Math.sin(a) * R
+    if (canStand(x, z)) { addTree(x, z, 1.25, 'cherry'); spots.push([x, z]) }
+  }
+  COLLIDERS.push({ x: c.x, z: c.z, r: 0.9 })
+  return { c, spots }
+})()
+/** café garden: a kiosk and two tables */
+export const cafe = (() => {
+  const c = place('cafe')
+  const kiosk: V2 = [c.x, c.z + 1.8], tables: V2[] = [[c.x - 2.8, c.z - 0.6], [c.x + 2.8, c.z - 0.6]]
+  COLLIDERS.push({ x: kiosk[0] - 1.0, z: kiosk[1], r: 1.0 }, { x: kiosk[0] + 1.0, z: kiosk[1], r: 1.0 })
+  for (const [x, z] of tables) COLLIDERS.push({ x, z, r: 0.85 })
+  return { c, kiosk, tables }
+})()
+/** stargazing hill: blanket, telescope and a lantern */
+export const stargaze = (() => {
+  const c = place('stars')
+  return { c, blanket: [c.x + 0.8, c.z + 0.2] as V2, scope: [c.x - 1.6, c.z - 1.0] as V2 }
+})()
+COLLIDERS.push({ x: stargaze.scope[0], z: stargaze.scope[1], r: 0.5 })
 
 // a cherry tree behind every memorial shrine
 for (const s of SLOTS) {
@@ -109,6 +161,23 @@ for (const s of SLOTS) {
   }
 }
 
+// sandy islets out at sea: one little tree each
+for (const it of ISLETS) addTree(it.x, it.z, 0.9, 'green', rnd(), false)
+
+// lighthouse + viewing deck on the west headland
+COLLIDERS.push({ x: LIGHTHOUSE.x, z: LIGHTHOUSE.z, r: 2.1 }, { x: VIEWPOINT.x - 1.2, z: VIEWPOINT.z + 0.3, r: 0.45 })
+{
+  const cx = VIEWPOINT.x, cz = VIEWPOINT.z, h = 1.95
+  const side = (ax: number, az: number, bx: number, bz: number) => {
+    const n = Math.round(Math.hypot(bx - ax, bz - az) / 1.3)
+    for (let i = 0; i <= n; i++) { const x = ax + ((bx - ax) * i) / n, z = az + ((bz - az) * i) / n; fencePosts.push([x, z]); COLLIDERS.push({ x, z, r: 0.3 }) }
+  }
+  side(cx + h, cz - h, cx - h, cz - h) // north
+  side(cx - h, cz - h, cx - h, cz + h) // west (sea side)
+  side(cx - h, cz + h, cx + h, cz + h) // south; the east side stays open towards the path
+}
+void HEADLAND
+
 // trees traced from the illustration
 const FIXED: [number, number, number, TreeDef['kind']][] = [
   [-39.7, -4.6, 1.9, 'cherry'], [-37.6, -27.9, 1.6, 'cherry'], [-26.2, -36, 1.6, 'cherry'], [-9, -38, 1.5, 'cherry'], [11, -36, 1.5, 'cherry'],
@@ -117,7 +186,8 @@ const FIXED: [number, number, number, TreeDef['kind']][] = [
   [-40.5, -44.6, 1.5, 'green'], [-24.8, 27.3, 1.2, 'green'], [7.5, 46.6, 1.2, 'green'], [20.8, 36.2, 1.2, 'green'], [43.8, -39.6, 1.3, 'green'],
   [53.3, -34.6, 1.2, 'green'], [-3.8, -50.9, 1.3, 'green'], [-14, -44, 1.3, 'green'], [20, -48, 1.4, 'green'], [48, -20, 1.5, 'green'],
 ]
-for (const [x, z, s, k] of FIXED) if (free(x, z, 2.2, s * 0.5)) addTree(x, z, s, k)
+const zoned = (k: TreeDef['kind'], x: number, z: number): TreeDef['kind'] => ((k === 'cherry' || k === 'green') && zoneWeight('autumn', x, z) > 0.5 ? 'autumn' : k)
+for (const [x, z, s, k] of FIXED) if (free(x, z, 2.2, s * 0.5)) addTree(x, z, s, zoned(k, x, z))
 
 // scatter to fill the rest
 let tries = 0
@@ -128,7 +198,16 @@ while (trees.length < 80 && tries++ < 8000) {
   if (Math.hypot(x, z) < 5) continue
   if (!free(x, z, 3.0, 1.6)) continue
   const k = rnd()
-  addTree(x, z, 1.0 + rnd() * 0.9, k < 0.6 ? 'cherry' : k < 0.66 ? 'white' : 'green')
+  addTree(x, z, 1.0 + rnd() * 0.9, zoned(k < 0.6 ? 'cherry' : k < 0.66 ? 'white' : 'green', x, z))
+}
+// the autumn grove (north-west): a few extra trees so it reads as its own place
+{
+  let n = 0, t2 = 0
+  while (n < 14 && t2++ < 600) {
+    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 16
+    const x = -32 + Math.cos(a) * r, z = -33 + Math.sin(a) * r
+    if (zoneWeight('autumn', x, z) > 0.3 && free(x, z, 3.0, 1.6)) { addTree(x, z, 1.2 + rnd() * 0.8, 'autumn'); n++ }
+  }
 }
 
 // benches (positions traced from the illustration; nudged off the paths, facing the nearest path)
@@ -178,7 +257,9 @@ function placeFlower(x: number, z: number, minPath: number) {
   if (Math.abs(x) < 3.2 && z > 40) return false
   if (distToPolyline(x, z, STREAM) < 1.6) return false
   for (const c of COLLIDERS) if (Math.hypot(x - c.x, z - c.z) < c.r + 0.3) return false
-  const palette = Math.floor((Math.sin(x * 0.19) + Math.cos(z * 0.23) + 2) * 1.6 + rnd() * 0.9) % 6
+  let palette = Math.floor((Math.sin(x * 0.19) + Math.cos(z * 0.23) + 2) * 1.6 + rnd() * 0.9) % 6
+  if (zoneWeight('autumn', x, z) > 0.45) palette = [2, 5, 2, 5, 2, 1][Math.floor(rnd() * 6)] // golden / coral
+  else if (zoneWeight('cosmos', x, z) > 0.45) palette = [0, 0, 1, 4, 0, 1][Math.floor(rnd() * 6)] // cosmos: pink, white, lilac
   flowers.push({ x, z, y: terrainHeight(x, z), c: palette, s: 0.7 + rnd() * 0.7 })
   fc++
   return true
@@ -196,12 +277,36 @@ const DRIFTS: [number, number, number, number][] = [
   [0, 0, 10, 240], // ring garden around the big white tree
   [10, 18, 7, 80], [24, 27, 6, 90], [30, 14, 6, 90], // by the pond
   [-22, 10, 6, 90], [-28, -14, 5, 80], [14, -26, 6, 90],
+  [27, 33, 10, 330], [-32, -33, 13, 120], // cosmos field and autumn grove
 ]
 for (const [cx, cz, rad, n] of DRIFTS) {
   let k = 0, tt = 0
   while (k < n && tt++ < n * 12) {
     const a = rnd() * Math.PI * 2, r = (cx === 0 && cz === 0 ? 3.6 : 0) + Math.sqrt(rnd()) * rad
     if (placeFlower(cx + Math.cos(a) * r, cz + Math.sin(a) * r, 1.7)) k++
+  }
+}
+// reeds and cattails: pond rim and both sides of the stream
+{
+  const put = (x: number, z: number) => {
+    const h = terrainHeight(x, z)
+    if (h < 0.1 || h > 1.4 || distToPath(x, z) < 1.8) return
+    if (COLLIDERS.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + 0.2)) return
+    reeds.push({ x, y: h, z, s: 0.8 + rnd() * 0.8 })
+  }
+  for (let i = 0; i < 260; i++) {
+    const a = rnd() * Math.PI * 2, r = POND.r + 0.4 + rnd() * 1.8
+    if (Math.sin(a * 3 + 1) < -0.2) continue // leave gaps in the rim
+    put(POND.x + Math.cos(a) * r, POND.z + Math.sin(a) * r)
+  }
+  for (let i = 0; i < STREAM.length - 1; i++) {
+    const [ax, az] = STREAM[i], [bx, bz] = STREAM[i + 1]
+    for (let k = 0; k < 14; k++) {
+      const t = rnd(), side = rnd() < 0.5 ? -1 : 1
+      const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz) || 1
+      const off = 1.5 + rnd() * 1.1
+      put(ax + dx * t - (dz / l) * off * side, az + dz * t + (dx / l) * off * side)
+    }
   }
 }
 export const FLOWER_COLORS = [0xff9ec4, 0xffffff, 0xffe066, 0xa9b8ff, 0xc9a0ff, 0xff8a7a]

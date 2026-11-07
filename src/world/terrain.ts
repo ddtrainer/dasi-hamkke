@@ -23,7 +23,7 @@ export type V2 = [number, number]
 
 // ---------------- coast outline (world x,z) ----------------
 export const COAST: V2[] = [
-  [-55, 0], [-63.2, -18.4], [-59.5, -28.4], [-51.4, -38.4], [-40, -48.4], [-30.5, -53.4], [-13.3, -58.4], [5.7, -60.9],
+  [-55, 0], [-65, -5], [-76, -9.5], [-68, -15.5], [-63.2, -18.4], [-59.5, -28.4], [-51.4, -38.4], [-40, -48.4], [-30.5, -53.4], [-13.3, -58.4], [5.7, -60.9],
   [24.8, -59.6], [39, -53.4], [53.3, -40.9], [62.9, -25.9], [49.7, 4.3], [39.9, 26.3], [29.8, 39.8], [19.6, 52.9],
   [14.7, 60.1], [10.4, 60.8], [6.4, 63], [4, 66.6], [-3.8, 67.3], [-6.1, 66.6], [-10.6, 62.1], [-17.5, 54.4],
   [-22.4, 46.6], [-29, 39.8], [-40.7, 21.9],
@@ -67,7 +67,19 @@ export const POND = { x: 16.4, z: 18.5, r: 6.8 }
 export const HILLS = [
   { x: 10, z: -54, a: 8, s: 9 }, // north hill with the big tree
   { x: 38, z: -48, a: 10, s: 10 }, // gazebo hill with the waterfall
+  { x: -66.5, z: -9, a: 2.2, s: 7 }, // lighthouse headland on the west coast
 ]
+/** Small sandy islets out at sea (each far enough off-shore that the shore waves ignore them). */
+export const ISLETS = [{ x: -48, z: -72, r: 5 }, { x: 45, z: -75, r: 4.2 }, { x: 70, z: 40, r: 4.8 }]
+export const HEADLAND = { x: -66.5, z: -9, top: 3.6 } // flat hilltop with the lighthouse and the viewpoint deck
+export const LIGHTHOUSE = { x: -67.8, z: -12 }
+export const VIEWPOINT = { x: -69.8, z: -6.2 }
+/** Seasonal zones (soft-edged discs): the autumn grove in the north-west, the cosmos field in the south-east. */
+export const ZONES = { autumn: { x: -32, z: -33, r: 18 }, cosmos: { x: 27, z: 33, r: 11 } }
+export function zoneWeight(zone: keyof typeof ZONES, x: number, z: number) {
+  const q = ZONES[zone]
+  return 1 - sstep(q.r * 0.6, q.r, Math.hypot(x - q.x, z - q.z))
+}
 export const BRIDGE = { halfW: 2.5, z0: 43, z1: 112, y: 1.7 }
 export const STREAM_BRIDGE = { x0: 19, x1: 27, z0: -22.2, z1: -18.6, y: 1.75 }
 export const STREAM: V2[] = [
@@ -77,6 +89,13 @@ export const GATE = { x: 0, z: 45 }
 export const CENTER_TREE = { x: 0, z: 0 }
 export const RING_R = 12.5
 export const GAZEBO = { x: 38, z: -48 }
+/** Small destinations with one action each (the HUD offers it when the player stands inside). */
+export const PLACES = [
+  { id: 'dogpark', x: -28.5, z: 10, r: 6.5, icon: '🎾', label: '공 던지기' },
+  { id: 'wish', x: -27.6, z: -12, r: 5.5, icon: '🎀', label: '소원 리본 달기' },
+  { id: 'cafe', x: -12, z: 51, r: 5, icon: '☕', label: '차 한 잔 마시기' },
+  { id: 'stars', x: 18, z: -38.5, r: 5.5, icon: '🔭', label: '별 보기' },
+] as const
 export const BIG_TREE = { x: 10, z: -54 }
 export const WATERFALL = { x: 30, z: -35 }
 export const FENCE: V2[] = [[41, 15], [41.5, 20], [38, 25.5], [33.5, 30.5]]
@@ -117,6 +136,14 @@ function baseHeight(x: number, z: number): number {
       const top = 0.62 + 0.05 * Math.sin(x * 0.45) * Math.sin(z * 0.4)
       h = Math.max(h, -2 + (top + 2) * fade * beachiness(x, z))
     }
+  }
+  { // headland plateau: a levelled hilltop that ends in a cliff
+    const d = Math.hypot(x - HEADLAND.x, z - HEADLAND.z)
+    if (d < 12 && h < HEADLAND.top) h += (HEADLAND.top - h) * (1 - sstep(4.5, 12, d))  // blend up to the flat top
+  }
+  for (const it of ISLETS) {
+    const d = Math.hypot(x - it.x, z - it.z)
+    if (d < it.r) h = Math.max(h, -2 + 3.2 * (1 - sstep(it.r * 0.35, it.r, d)))
   }
   return h
 }
@@ -195,6 +222,10 @@ Object.assign(NODES, {
   // east: behind the market, then along the inner east footpath (the cliff fence and a shrine sit at the shore there)
   P17: [52.4, -30.3], P18: [55.2, -20.1], P19: [49.5, -8.7], P20: [45.2, -1], P21: [44.2, 5], P22: [42.6, 12.5], P23: [39, 13.6],
   // south: through the plaza just inside the gate (SE2, SE1, G2 are shared with the main paths)
+  // west headland: spur from the coastal trail to the lighthouse and the viewpoint at the tip
+  // little places off the main paths: dog park, memory forest, café garden, stargazing hill
+  DP: [-34, 10.5], DPc: [-29.8, 10], MF: [-28.6, -11.5], CF: [-12, 47.4], SG: [17.5, -38.5],
+  HL1: [-58.5, -9.6], HL2: [-63.5, -8.2], VP: [-68.6, -7],
   WS1: [-4.5, 40.2], WS2: [-8.4, 42.3], P29: [-15, 45], P30: [-22, 38.1], P31: [-26.8, 31.9], P32: [-30.6, 25.7], P33: [-34.3, 19.8], P34: [-38.4, 14], P35: [-43, 7.6],
 })
 const MAIN_EDGES: [string, string][] = [
@@ -218,7 +249,8 @@ const LOOP_EDGES: [string, string][] = [
   // side trails joining the loop to the inner paths
   ['W3', 'P1'], ['W2', 'P0'],
 ]
-export const EDGES: [string, string][] = [...MAIN_EDGES, ...LOOP_EDGES]
+const SPUR_EDGES: [string, string][] = [['P1', 'HL1'], ['HL1', 'HL2'], ['HL2', 'VP'], ['P34', 'DP'], ['DP', 'DPc'], ['W3', 'MF'], ['P29', 'CF'], ['H1', 'SG']]
+export const EDGES: [string, string][] = [...MAIN_EDGES, ...LOOP_EDGES, ...SPUR_EDGES]
 export const PATH_SEGS: [V2, V2][] = EDGES.map(([a, b]) => [NODES[a], NODES[b]])
 /** Inner paths only: shrines and benches are placed relative to these, so the coastal trail never moves them. */
 const MAIN_SEGS: [V2, V2][] = MAIN_EDGES.map(([a, b]) => [NODES[a], NODES[b]])
@@ -377,4 +409,9 @@ export const DESTINATIONS = {
   bigtree: { label: '언덕 위 큰 나무', p: [10, -50] as V2 },
   gate: { label: '입구 아치', p: [0, 41] as V2 },
   market: { label: '다시 함께 마켓', p: MARKET.front },
+  lighthouse: { label: '등대 전망대', p: [-68.6, -7] as V2 },
+  dogpark: { label: '반려견 놀이터', p: [-29.8, 10] as V2 },
+  wish: { label: '추억의 숲', p: [-28.6, -11.5] as V2 },
+  cafe: { label: '카페 정원', p: [-12, 47.4] as V2 },
+  stars: { label: '별 보는 언덕', p: [17.5, -38.5] as V2 },
 }

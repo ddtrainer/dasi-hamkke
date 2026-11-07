@@ -1,6 +1,7 @@
 import { game, startAutoWalk, cancelAutoWalk } from './game'
-import { SLOTS, planRoute, routeThrough, DESTINATIONS, V2, NODES, LOOP_IDS } from './terrain'
-import { useStore } from '../lib/store'
+import { SLOTS, planRoute, routeThrough, DESTINATIONS, V2, NODES, LOOP_IDS, PLACES, canStand, groundHeight } from './terrain'
+import { useStore, saveMarket } from '../lib/store'
+import { chime } from '../lib/audio'
 
 export function walkTo(p: V2, label?: string, then?: () => void) {
   const route = planRoute([game.pos.x, game.pos.z], p)
@@ -41,3 +42,39 @@ export function loopWalk() {
   useStore.getState().say('반려견과 함께 섬을 한 바퀴 걸어요. 조작하면 멈춰요.')
 }
 export function stopWalk() { cancelAutoWalk() }
+
+/** Throw the ball ahead of the player (stays on walkable ground); the dog fetches it and brings it back. */
+export function throwBall() {
+  const b = game.ball
+  if (b.s !== 'none') { useStore.getState().say('🐶 공을 쫓아가고 있어요!'); return }
+  const hx = Math.sin(game.heading), hz = Math.cos(game.heading)
+  let d = 1
+  while (d < 8.5 && canStand(game.pos.x + hx * (d + 0.5), game.pos.z + hz * (d + 0.5))) d += 0.5
+  b.x = game.pos.x + hx * 0.5; b.z = game.pos.z + hz * 0.5; b.y = groundHeight(b.x, b.z) + 1.3
+  const T = 0.9 // flight time
+  b.vx = (hx * d) / T; b.vz = (hz * d) / T; b.vy = 0.5 * 9.8 * T - (1.3 - 0.15) / T
+  b.s = 'fly'
+  game.offerUntil = game.time + 0.7
+}
+/** The single action offered by each little place (see PLACES). */
+export function placeAction(id: string) {
+  const st = useStore.getState()
+  if (id === 'dogpark') return throwBall()
+  if (id === 'wish') {
+    if (st.ribbons >= 60) { st.say('🎀 숲이 소원 리본으로 가득해요. 모두의 마음이 모였어요.'); return }
+    st.set({ ribbons: st.ribbons + 1 }); saveMarket(); chime()
+    st.say('🎀 소원 리본을 달았어요. 소중한 이름을 마음속으로 불러 보세요.')
+    return
+  }
+  if (id === 'cafe') {
+    game.wantSit = true; chime()
+    st.say('☕ 따뜻한 차 한 잔. 천천히 숨을 고르며 쉬어 가요.')
+    return
+  }
+  if (id === 'stars') {
+    game.wantSit = true
+    if (st.tod !== 'night') { st.set({ tod: 'night' }); st.say('🔭 하늘이 어두워졌어요. 별을 바라봐요. (위의 시간 버튼으로 바꿀 수 있어요)') }
+    else st.say('🌠 별똥별이 지나가면 소원을 빌어 보세요.')
+  }
+}
+export const PLACE_BY_ID = Object.fromEntries(PLACES.map((p) => [p.id, p]))
