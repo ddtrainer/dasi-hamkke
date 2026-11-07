@@ -212,14 +212,15 @@ export function Dog() {
     const s = st.current
     const p = game.pos
     if (!s.init) { s.x = p.x + 0.5; s.z = p.z + 0.9; s.init = true }
-    const tx = p.x - Math.sin(game.heading) * 1.0 + Math.cos(game.heading) * 0.55
-    const tz = p.z - Math.cos(game.heading) * 1.0 - Math.sin(game.heading) * 0.55
+    // stays close: just behind and a little to the side of the player
+    const tx = p.x - Math.sin(game.heading) * 0.75 + Math.cos(game.heading) * 0.42
+    const tz = p.z - Math.cos(game.heading) * 0.75 - Math.sin(game.heading) * 0.42
     let dx = tx - s.x, dz = tz - s.z
     let d = Math.hypot(dx, dz)
-    if (d > 14) { s.x = p.x - Math.sin(game.heading) * 1.5; s.z = p.z - Math.cos(game.heading) * 1.5; dx = dz = d = 0 }
+    if (d > 6) { s.x = p.x - Math.sin(game.heading) * 1.0; s.z = p.z - Math.cos(game.heading) * 1.0; dx = dz = d = 0 }
     let moving = false
-    if (d > 0.3) {
-      const sp = Math.min(6.4, 1.6 + d * 2.3) * dt
+    if (d > 0.15) {
+      const sp = Math.min(9, 1.8 + d * 7) * dt
       const [nx, nz] = moveWithCollision(s.x, s.z, (dx / d) * sp, (dz / d) * sp)
       if (nx !== s.x || nz !== s.z) moving = true
       const want = Math.atan2(nx - s.x || dx, nz - s.z || dz)
