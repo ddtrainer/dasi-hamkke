@@ -100,7 +100,8 @@ function Landing() {
       <div className="hero">
         <div className="paw">🐾</div>
         <h1>다시 함께</h1>
-        <p className="sub">푸른 바다와 꽃이 가득한 작은 월드에서<br />함께 걷고, 함께 숨 쉬며, 소소한 행복을 느끼는 시간</p>
+        <p className="sub">푸른 바다와 꽃이 가득한 작은 세상,<br />다시 만나 함께 걷고 행복을 나누는 시간.</p>
+        <p className="sub sub2">너를 향한 내 따뜻한 마음과 숨결이 닿기를.<br />언제나 사랑해, 영원히.</p>
         {gl ? (
           <button className="btn primary big" onClick={enter}>다시 함께 입장하기</button>
         ) : (
