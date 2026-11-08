@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../lib/store'
-import { BREEDS, BREED_IDS, breedProfile, savePet, type PetProfile, type Pattern, type EarType, type TailType, type CoatStyle } from '../lib/pet'
+import { BREEDS, BREED_IDS, breedProfile, savePet, MAX_MARKS, type Mark, type PartId, type PetProfile, type Pattern, type EarType, type TailType, type CoatStyle } from '../lib/pet'
 import { DogBody, EAR_BASE } from '../world/DogModel'
 import { chime } from '../lib/audio'
 
-function DogPreview({ pet }: { pet: PetProfile }) {
+interface Paint { on: boolean; color: string; size: number }
+function DogPreview({ pet, paint, onMark }: { pet: PetProfile; paint: Paint; onMark: (m: Mark) => void }) {
+  const paintRef = useRef(paint)
+  paintRef.current = paint
   const spin = useRef<THREE.Group>(null!)
   const rig = useRef<THREE.Group>(null!)
   const legs = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!), useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)]
@@ -18,7 +21,7 @@ function DogPreview({ pet }: { pet: PetProfile }) {
   const drag = useRef({ on: false, x: 0, v: 0.5 })
   useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime
-    if (!drag.current.on) spin.current.rotation.y += dt * drag.current.v
+    if (!drag.current.on && !paintRef.current.on) spin.current.rotation.y += dt * drag.current.v
     legs.forEach((l) => { if (l.current) l.current.rotation.x = 0 })
     if (rig.current) rig.current.position.y = 0.3
     if (tail.current) tail.current.rotation.z = Math.sin(t * 7) * 0.5
@@ -39,6 +42,18 @@ function DogPreview({ pet }: { pet: PetProfile }) {
         position={[0, 0, 0]}
         onPointerDown={(e) => { drag.current.on = true; drag.current.x = e.clientX; (e.target as Element)?.setPointerCapture?.(e.pointerId) }}
         onPointerMove={(e) => { if (drag.current.on) { spin.current.rotation.y += (e.clientX - drag.current.x) * 0.012; drag.current.x = e.clientX } }}
+        onClick={(e) => {
+          // paint mode: a tap on the dog puts a spot on the touched body part
+          if (!paintRef.current.on || e.delta > 5 || !e.face) return
+          let o: THREE.Object3D | null = e.object, part: THREE.Object3D | null = null
+          while (o) { if (o.userData?.part) { part = o; break } o = o.parent }
+          if (!part) return
+          e.stopPropagation()
+          const inv = part.matrixWorld.clone().invert()
+          const p = part.worldToLocal(e.point.clone())
+          const n = e.face.normal.clone().transformDirection(e.object.matrixWorld).transformDirection(inv)
+          onMark({ part: part.userData.part as PartId, p: [p.x, p.y, p.z], n: [n.x, n.y, n.z], s: paintRef.current.size, c: paintRef.current.color })
+        }}
         onPointerUp={() => { drag.current.on = false }}
         onPointerMissed={() => { drag.current.on = false }}
       >
@@ -207,16 +222,24 @@ function ColorRow({ label, v, on }: { label: string; v: string; on: (c: string) 
 export function PetEditor({ d, setD, photoUrl }: { d: PetProfile; setD: React.Dispatch<React.SetStateAction<PetProfile>>; photoUrl?: string | null }) {
   const up = (p: Partial<PetProfile>) => setD((o) => ({ ...o, ...p }))
   const key = useMemo(() => JSON.stringify([d.ears, d.tail, d.pattern, d.coatStyle]), [d.ears, d.tail, d.pattern, d.coatStyle])
+  const [paint, setPaint] = useState<Paint>({ on: false, color: '#ffffff', size: 1.2 })
+  const addMark = (m: Mark) => setD((o) => ({ ...o, marks: [...o.marks, m].slice(-MAX_MARKS) }))
   const chip = <T extends string>(list: [T, string][], cur: T, on: (v: T) => void) => (
     <div className="tabs wrap">{list.map(([k, l]) => (<button type="button" key={k} className={'tab' + (cur === k ? ' on' : '')} onClick={() => on(k)}>{l}</button>))}</div>
   )
+  const toggle = (k: 'socks' | 'blaze' | 'tailTip' | 'browDots', label: string) => (
+    <button type="button" className={'tab' + (d[k] ? ' on' : '')} onClick={() => up({ [k]: !d[k] })}>{label}</button>
+  )
   return (
     <>
-      <div className="pet-prev">
-        <Canvas key={key} camera={{ position: [0, 0.95, 2.6], fov: 34 }} dpr={[1, 1.5]} onCreated={({ camera }) => camera.lookAt(0, 0.5, 0)}>
-          <DogPreview pet={d} />
-        </Canvas>
-        <small>드래그하면 돌려볼 수 있어요</small>
+      <div className={'cmp' + (photoUrl ? ' two' : '')}>
+        {photoUrl && <div className="cmp-ph"><img src={photoUrl} alt="우리 아이 사진" /><small>우리 아이 사진</small></div>}
+        <div className={'pet-prev' + (paint.on ? ' painting' : '')}>
+          <Canvas key={key} camera={{ position: [0, 0.95, 2.6], fov: 34 }} dpr={[1, 1.5]} onCreated={({ camera }) => camera.lookAt(0, 0.5, 0)}>
+            <DogPreview pet={d} paint={paint} onMark={addMark} />
+          </Canvas>
+          <small>{paint.on ? '반려견을 누르면 점이 찍혀요' : '드래그하면 돌려볼 수 있어요'}</small>
+        </div>
       </div>
       <h4>견종 (기본 모습)</h4>
       <div className="tabs wrap">{BREED_IDS.map((b) => (<button type="button" key={b} className={'tab' + (d.breed === b ? ' on' : '')} onClick={() => setD((o) => breedProfile(b, o.name))}>{BREEDS[b].icon} {BREEDS[b].label}</button>))}</div>
@@ -233,6 +256,29 @@ export function PetEditor({ d, setD, photoUrl }: { d: PetProfile; setD: React.Di
       {chip(EARS, d.ears, (v) => up({ ears: v }))}
       <h4>꼬리</h4>
       {chip(TAILS, d.tail, (v) => up({ tail: v }))}
+      <h4>특징 표시 (우리 아이만의 점·무늬)</h4>
+      <div className="tabs wrap">
+        {toggle('socks', '🧦 양말(하얀 발)')}{toggle('blaze', '⚪ 얼굴 하얀 줄')}{toggle('tailTip', '꼬리 끝 하얀색')}{toggle('browDots', '눈썹 점')}
+      </div>
+      <div className="paintbox">
+        <button type="button" className={'btn small' + (paint.on ? ' primary' : '')} onClick={() => setPaint((p) => ({ ...p, on: !p.on }))}>{paint.on ? '✏️ 점 찍는 중 (끄기)' : '✏️ 점 찍기 켜기'}</button>
+        <div className="row2">
+          {['#ffffff', '#211d20', '#5a3b2a', '#8a5f38', '#d9a059', '#e0903f', '#9a9a9a', '#ffb3c7'].map((c) => (<button type="button" key={c} className={'sw' + (paint.color === c ? ' on' : '')} style={{ background: c }} onClick={() => setPaint((p) => ({ ...p, color: c, on: true }))} aria-label={c} />))}
+          <input type="color" value={paint.color} onChange={(e) => setPaint((p) => ({ ...p, color: e.target.value, on: true }))} aria-label="점 색 직접 고르기" />
+        </div>
+        <div className="row2">
+          {([[0.7, '작게'], [1.2, '보통'], [2, '크게']] as const).map(([v, l]) => (<button type="button" key={l} className={'tab' + (paint.size === v ? ' on' : '')} onClick={() => setPaint((p) => ({ ...p, size: v }))}>{l}</button>))}
+          <button type="button" className="btn small" disabled={!d.marks.length} onClick={() => setD((o) => ({ ...o, marks: o.marks.slice(0, -1) }))}>↩ 마지막 점 지우기</button>
+          <button type="button" className="btn small" disabled={!d.marks.length} onClick={() => setD((o) => ({ ...o, marks: [] }))}>모두 지우기</button>
+        </div>
+        <p className="hint">점 {d.marks.length}/{MAX_MARKS} · 체형과 얼굴을 먼저 정한 뒤에 찍으면 위치가 어긋나지 않아요.</p>
+      </div>
+      <h4>얼굴 모양</h4>
+      <Slider label="머리 크기" v={d.headSize} lo={0.85} hi={1.2} on={(n) => up({ headSize: n })} />
+      <Slider label="눈 크기" v={d.eyeSize} lo={0.8} hi={1.4} on={(n) => up({ eyeSize: n })} />
+      <Slider label="눈 사이" v={d.eyeGap} lo={0.8} hi={1.3} on={(n) => up({ eyeGap: n })} />
+      <Slider label="귀 크기" v={d.earSize} lo={0.7} hi={1.4} on={(n) => up({ earSize: n })} />
+      <Slider label="코 크기" v={d.noseSize} lo={0.7} hi={1.5} on={(n) => up({ noseSize: n })} />
       <h4>체형</h4>
       <Slider label="크기" v={d.size} lo={0.7} hi={1.5} on={(n) => up({ size: n })} />
       <Slider label="다리 길이" v={d.legs} lo={0.6} hi={1.25} on={(n) => up({ legs: n })} />
@@ -277,7 +323,7 @@ export function PetModal() {
           <p className="hint">분향소를 만들면 사진 속 아이가 이 섬에서 함께 걸어요. 그전에는 이 아이가 따라다녀요.</p>
         )}
         {target && companionId === target && <button type="button" className="btn small" onClick={() => void rest()}>🌙 분향소에서 쉬게 하기</button>}
-        <PetEditor d={d} setD={setD} />
+        <PetEditor d={d} setD={setD} photoUrl={m?.photoUrl} />
         <div className="row2 end">
           <button className="btn" onClick={close}>취소</button>
           <button className="btn primary" onClick={save}>저장</button>

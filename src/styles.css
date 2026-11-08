@@ -192,3 +192,13 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 /* the 냥 of the name is coral pink, like on the sign */
 .nyang { color: #fc6860; font-style: normal; }
 .splash-cap b .nyang { color: #ff7a72; }
+
+/* side-by-side photo compare, paint tool */
+.cmp.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cmp-ph { position: relative; height: 230px; border-radius: 16px; overflow: hidden; background: #f3efe6; }
+.cmp-ph img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cmp-ph small { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; color: #6b5b48; font-size: .72rem; text-shadow: 0 0 4px #fff; }
+.pet-prev.painting { outline: 3px solid #f7a8c8; cursor: crosshair; }
+.paintbox { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px dashed #e0cfae; border-radius: 12px; }
+.paintbox .tab { flex: 0 1 auto; padding: 6px 10px; font-size: .8rem; }
+.btn.small:disabled { opacity: .45; }

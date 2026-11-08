@@ -6,7 +6,28 @@ export type EarType = 'round' | 'perky' | 'big' | 'drop' | 'fold'
 export type TailType = 'plume' | 'curl' | 'straight' | 'stub'
 export type CoatStyle = 'smooth' | 'fluffy' | 'curly'
 
-export interface PetProfile {
+export type PartId = 'body' | 'head' | 'earL' | 'earR' | 'tail' | 'leg0' | 'leg1' | 'leg2' | 'leg3'
+export const PART_IDS: readonly PartId[] = ['body', 'head', 'earL', 'earR', 'tail', 'leg0', 'leg1', 'leg2', 'leg3']
+/** a spot painted on the dog: a point on one body part (in that part's own coordinates), its surface normal, size and colour */
+export interface Mark { part: PartId; p: [number, number, number]; n: [number, number, number]; s: number; c: string }
+export const MAX_MARKS = 24
+
+/** what makes this particular dog recognisable: hand-placed marks, small face tweaks and a few classic markings */
+export interface Signature {
+  marks: Mark[]
+  socks: boolean // white paws
+  blaze: boolean // white stripe down the face
+  tailTip: boolean // white tail tip
+  browDots: boolean // little spots above the eyes
+  headSize: number // 0.85 – 1.2
+  eyeSize: number // 0.8 – 1.4
+  eyeGap: number // 0.8 – 1.3
+  earSize: number // 0.7 – 1.4
+  noseSize: number // 0.7 – 1.5
+}
+export const NEUTRAL: Signature = { marks: [], socks: false, blaze: false, tailTip: false, browDots: false, headSize: 1, eyeSize: 1, eyeGap: 1, earSize: 1, noseSize: 1 }
+
+export interface PetProfile extends Signature {
   name: string
   breed: BreedId
   coat: string // main colour
@@ -24,7 +45,7 @@ export interface PetProfile {
   snout: number // 0.5 – 1.5
 }
 
-export const BREEDS: Record<BreedId, { label: string; icon: string; p: Omit<PetProfile, 'name' | 'breed'> }> = {
+export const BREEDS: Record<BreedId, { label: string; icon: string; p: Omit<PetProfile, 'name' | 'breed' | keyof Signature> }> = {
   chihuahua: { label: '치와와', icon: '🐕', p: { coat: '#211d20', accent: '#d9a059', white: '#fbf0e0', pattern: 'tan', ears: 'round', tail: 'plume', coatStyle: 'fluffy', eye: '#4a2a18', nose: '#141012', size: 0.8, legs: 1, chunk: 1, snout: 1 } },
   maltese: { label: '말티즈', icon: '🐩', p: { coat: '#fbf7ee', accent: '#efe2c8', white: '#ffffff', pattern: 'solid', ears: 'drop', tail: 'curl', coatStyle: 'fluffy', eye: '#2a1a12', nose: '#141012', size: 0.85, legs: 0.85, chunk: 1.05, snout: 0.7 } },
   poodle: { label: '푸들', icon: '🐩', p: { coat: '#d9a77a', accent: '#c48e5f', white: '#e8c9a4', pattern: 'solid', ears: 'drop', tail: 'curl', coatStyle: 'curly', eye: '#2a1a12', nose: '#2a1a12', size: 1.0, legs: 1.2, chunk: 0.95, snout: 1.15 } },
@@ -39,7 +60,7 @@ export const BREEDS: Record<BreedId, { label: string; icon: string; p: Omit<PetP
 export const BREED_IDS = Object.keys(BREEDS) as BreedId[]
 
 export function breedProfile(id: BreedId, name = ''): PetProfile {
-  return { name, breed: id, ...BREEDS[id].p }
+  return { name, breed: id, ...NEUTRAL, ...BREEDS[id].p }
 }
 
 export const DEFAULT_PET: PetProfile = breedProfile('chihuahua')
@@ -49,6 +70,19 @@ const HEX = /^#[0-9a-fA-F]{6}$/
 const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d)
 const oneOf = <T extends string>(v: unknown, list: readonly T[], d: T): T => (list.includes(v as T) ? (v as T) : d)
 const col = (v: unknown, d: string) => (typeof v === 'string' && HEX.test(v) ? v : d)
+
+function sanitizeMarks(raw: unknown): Mark[] {
+  if (!Array.isArray(raw)) return []
+  const v3 = (a: unknown): [number, number, number] | null => (Array.isArray(a) && a.length === 3 && a.every((x) => typeof x === 'number' && isFinite(x)) ? [a[0], a[1], a[2]] : null)
+  const out: Mark[] = []
+  for (const r of raw.slice(0, MAX_MARKS)) {
+    const o = (r && typeof r === 'object' ? r : {}) as Record<string, unknown>
+    const p = v3(o.p), n = v3(o.n)
+    if (!p || !n || !PART_IDS.includes(o.part as PartId) || typeof o.c !== 'string' || !HEX.test(o.c)) continue
+    out.push({ part: o.part as PartId, p, n, s: num(o.s, 0.4, 3, 1), c: o.c })
+  }
+  return out
+}
 
 export function sanitizePet(raw: unknown): PetProfile {
   const m = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
@@ -63,6 +97,8 @@ export function sanitizePet(raw: unknown): PetProfile {
     tail: oneOf(m.tail, ['plume', 'curl', 'straight', 'stub'] as const, d.tail),
     coatStyle: oneOf(m.coatStyle, ['smooth', 'fluffy', 'curly'] as const, d.coatStyle),
     eye: col(m.eye, d.eye), nose: col(m.nose, d.nose),
+    marks: sanitizeMarks(m.marks), socks: m.socks === true, blaze: m.blaze === true, tailTip: m.tailTip === true, browDots: m.browDots === true,
+    headSize: num(m.headSize, 0.85, 1.2, 1), eyeSize: num(m.eyeSize, 0.8, 1.4, 1), eyeGap: num(m.eyeGap, 0.8, 1.3, 1), earSize: num(m.earSize, 0.7, 1.4, 1), noseSize: num(m.noseSize, 0.7, 1.5, 1),
     size: num(m.size, 0.7, 1.5, d.size), legs: num(m.legs, 0.6, 1.25, d.legs), chunk: num(m.chunk, 0.85, 1.3, d.chunk), snout: num(m.snout, 0.5, 1.5, d.snout),
   }
 }
