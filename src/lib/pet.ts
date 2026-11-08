@@ -115,11 +115,6 @@ export function hasSavedPet(): boolean {
 
 // ---- each memorial's dog (kept on this device, keyed by memorial id) and who is walking with the visitor ----
 const PETS_KEY = 'dasi.pets', COMP_KEY = 'dasi.companion'
-/** the demo memorials' dogs, so visitors see how a shrine looks with its pet waiting beside the photo */
-export const DEMO_PETS: Record<string, PetProfile> = {
-  'demo-1': { ...breedProfile('retriever', '초코'), coat: '#6b4a32', accent: '#4a3020', white: '#8a6246', pattern: 'solid', coatStyle: 'fluffy' },
-  'demo-3': { ...breedProfile('maltese', '하늘') },
-}
 export function loadPets(): Record<string, PetProfile> {
   try {
     const raw = JSON.parse(localStorage.getItem(PETS_KEY) ?? '{}') as Record<string, unknown>

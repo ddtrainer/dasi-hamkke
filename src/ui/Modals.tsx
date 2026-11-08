@@ -20,7 +20,7 @@ export function Portrait({ m, className }: { m: Memorial; className?: string }) 
 }
 
 export function ShrineModal() {
-  const { openId, memorials, userId, refresh, say, set, screen, pets, companionId, setCompanion } = useStore()
+  const { openId, memorials, userId, refresh, say, set, screen, pets, companionId, setCompanion, markRested } = useStore()
   const m = memorials.find((x) => x.id === openId)
   const [tributes, setTributes] = useState<Tribute[]>([])
   const [letter, setLetter] = useState('')
@@ -72,7 +72,7 @@ export function ShrineModal() {
   const restDog = async () => {
     close()
     if (screen === 'world') { const { restCompanion } = await import('../world/actions'); restCompanion() }
-    else { setCompanion(null); say(`🌙 ${m.petName}이(가) 쉬러 갔어요.`) }
+    else { markRested(m.id); setCompanion(null); say(`🌙 ${m.petName}이(가) 쉬러 갔어요.`) }
   }
   const toggle = async () => {
     const v: Visibility = m.visibility === 'public' ? 'private' : 'public'

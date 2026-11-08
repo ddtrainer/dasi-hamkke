@@ -25,6 +25,10 @@ export function saveMarket() {
   try { localStorage.setItem('dasi.market', JSON.stringify({ dogOutfit, goods, treats, tickets, owned, missions, ribbons })) } catch { /* ignore */ }
 }
 
+function loadRested(): string[] {
+  try { const r = JSON.parse(localStorage.getItem('dasi.rested') ?? '[]'); return Array.isArray(r) ? r.filter((x) => typeof x === 'string') : [] } catch { return [] }
+}
+
 interface S {
   screen: Screen
   phase: 'intro' | 'play'
@@ -54,6 +58,8 @@ interface S {
   pets: Record<string, PetProfile> // each memorial's dog, by memorial id
   companionId: string | null // memorial whose dog is walking with the visitor
   petOpen: boolean
+  rested: string[] // memorials whose dog has been called out and sent back: it then waits beside the photo
+  markRested: (id: string) => void
   petTarget: string | null // memorial being edited in the customiser (null = the default dog)
   setPetFor: (id: string, p: PetProfile) => void
   setCompanion: (id: string | null) => void
@@ -66,9 +72,10 @@ interface S {
 let toastT: number | undefined
 export const useStore = create<S>((set, get) => ({
   screen: resumed?.screen === 'world' ? 'world' : 'landing', phase: resumed?.screen === 'world' ? 'play' : 'intro', splash: false, quality: IS_MOBILE ? 'low' : 'high', tod: 'day', sfx: true, music: false,
-  userId: '', memorials: [], flowerCounts: {}, candleCounts: {}, openId: null, registerSlot: resumed?.screen === 'world' && resumed.reg ? resumed.regSlot : undefined, nearSlot: null, nearMarket: false, nearPlace: null, pet: loadPet(), pets: loadPets(), companionId: loadCompanion(), petOpen: false, petTarget: null, marketOpen: false, ...loadMarket(), menuOpen: false, toast: null,
+  userId: '', memorials: [], flowerCounts: {}, candleCounts: {}, openId: null, registerSlot: resumed?.screen === 'world' && resumed.reg ? resumed.regSlot : undefined, nearSlot: null, nearMarket: false, nearPlace: null, pet: loadPet(), pets: loadPets(), companionId: loadCompanion(), petOpen: false, petTarget: null, rested: loadRested(), marketOpen: false, ...loadMarket(), menuOpen: false, toast: null,
   set: (p) => set(p),
   setPetFor: (id, p) => { const pets = { ...get().pets, [id]: p }; savePets(pets); set({ pets }) },
+  markRested: (id) => { const rested = [...new Set([...get().rested, id])]; try { localStorage.setItem('dasi.rested', JSON.stringify(rested)) } catch { /* ignore */ } set({ rested }) },
   setCompanion: (id) => { saveCompanion(id); set({ companionId: id }) },
   say: (t) => { set({ toast: t }); clearTimeout(toastT); toastT = window.setTimeout(() => get().set({ toast: null }), 3200) },
   refresh: async () => {

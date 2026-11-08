@@ -8,7 +8,7 @@ import type { Memorial } from '../lib/types'
 import { goToSlot } from './actions'
 import { game } from './game'
 import { DogBody, EAR_BASE } from './DogModel'
-import { DEMO_PETS, type PetProfile } from '../lib/pet'
+import type { PetProfile } from '../lib/pet'
 
 function nameTexture(name: string, dates: string) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 128
@@ -106,7 +106,9 @@ function Shrine({ m, flowers, candles, mine }: { m: Memorial; flowers: number; c
   const photo = usePhoto(m)
   const pets = useStore((st) => st.pets)
   const companionId = useStore((st) => st.companionId)
-  const dogPet = pets[m.id] ?? DEMO_PETS[m.id]
+  const rested = useStore((st) => st.rested)
+  // the dog waits beside its photo only after it has been called out once and sent back to rest
+  const dogPet = mine && rested.includes(m.id) ? pets[m.id] : undefined
   const label = useMemo(() => nameTexture(m.petName, `${yr(m.birthDate)} – ${yr(m.passedDate)}`), [m.petName, m.birthDate, m.passedDate])
   const flames = [useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!)]
   const photoGlow = useRef<THREE.MeshBasicMaterial>(null!)

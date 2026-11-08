@@ -96,6 +96,7 @@ export function restCompanion() {
   const st = useStore.getState()
   const m = st.memorials.find((x) => x.id === st.companionId)
   game.glow.t = 0; game.glow.x = game.dog.x; game.glow.y = game.dog.y; game.glow.z = game.dog.z
+  if (m) st.markRested(m.id)
   st.setCompanion(null)
   st.say(m ? `🌙 ${m.petName}이(가) 분향소 사진 옆에서 쉬어요. 언제든 다시 불러 주세요.` : '쉬러 갔어요.')
 }
