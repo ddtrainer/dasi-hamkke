@@ -202,3 +202,19 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 .paintbox { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px dashed #e0cfae; border-radius: 12px; }
 .paintbox .tab { flex: 0 1 auto; padding: 6px 10px; font-size: .8rem; }
 .btn.small:disabled { opacity: .45; }
+
+/* character chooser */
+.avatarm { width: min(480px, 100%); }
+.pet-prev.tall { height: 300px; }
+.avatar-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.avopt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 6px; border: 2px solid #e6dcc9; background: #fff; border-radius: 14px; text-align: center; }
+.avopt .ic { font-size: 1.6rem; }
+.avopt b { font-size: .92rem; }
+.avopt small { font-size: .7rem; color: #8a7b68; line-height: 1.3; }
+.avopt.on { border-color: #f7a8c8; background: #ffeef5; }
+
+/* greeting */
+.interact.greet { bottom: calc(22% + 58px); background: #fff4d8; }
+.greetnote { position: absolute; top: 104px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: #fffdf8f2; border-radius: 999px; padding: 8px 8px 8px 16px; box-shadow: 0 6px 20px #0003; font-size: .92rem; z-index: 25; animation: pop .25s; max-width: 94vw; }
+.greetnote button { border: none; background: #ffe0a8; border-radius: 999px; padding: 7px 12px; font-size: .85rem; }
+.greetnote button.x2 { background: none; padding: 4px 8px; color: #8a7b68; }

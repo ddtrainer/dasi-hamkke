@@ -13,6 +13,7 @@ import { Places, ShootingStars } from './Places'
 import { Shrines } from './Shrines'
 import { Market } from './Market'
 import { Avatar, Dog, SummonGlow } from './Characters'
+import { Neighbors } from './Neighbors'
 import { PlayerController } from './Player'
 import { game, fx, lin, tod } from './game'
 
@@ -204,6 +205,7 @@ export function World() {
       <Avatar />
       <Dog />
       <SummonGlow />
+      <Neighbors />
       <Petals count={hi ? 260 : 90} />
       <Clouds />
       <PlayerController />

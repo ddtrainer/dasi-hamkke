@@ -5,6 +5,7 @@ import { Hud } from './Hud'
 import { ShrineModal, RegisterModal, Portrait } from './Modals'
 import { MarketModal } from './MarketModal'
 import { PetModal } from './PetModal'
+import { AvatarModal } from './AvatarModal'
 import { api } from '../lib/api'
 import { game } from '../world/game'
 import { resume, resumed, write } from '../lib/resume'
@@ -90,12 +91,8 @@ function Landing() {
   const { set } = useStore()
   const gl = hasWebGL()
   useEffect(() => { new Image().src = import.meta.env.BASE_URL + 'island.webp' }, [])
-  const enter = () => {
-    startAudio()
-    game.introT = 0
-    game.camFocus = null
-    set({ screen: 'world', phase: 'intro', splash: true })
-  }
+  // entering starts with choosing who to be on the island
+  const enter = () => set({ avatarFor: 'enter' })
   return (
     <div className="landing">
       <div className="hero">
@@ -124,7 +121,7 @@ function Flat() {
         <h1>🐾 댕<span className="nyang">냥</span> 메모리</h1>
         <div className="row">
           <button className="btn primary" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
-          {gl && <button className="btn" onClick={() => { startAudio(); game.introT = 0; game.camFocus = null; set({ screen: 'world', phase: 'intro', splash: true }) }}>🌸 3D 공원 입장</button>}
+          {gl && <button className="btn" onClick={() => set({ avatarFor: 'enter' })}>🌸 3D 공원 입장</button>}
         </div>
       </header>
       <p className="hint">2D 추모 화면 · 3D가 어려울 때도 모든 추모 기능을 사용할 수 있어요.</p>
@@ -148,7 +145,7 @@ function saveSession() {
 }
 
 export default function App() {
-  const { screen, splash, registerSlot, petOpen, set, refresh } = useStore()
+  const { screen, splash, registerSlot, petOpen, avatarFor, set, refresh } = useStore()
   useEffect(() => { void refresh() }, [refresh])
   // phone webviews can reload the page while the photo picker is open: remember where the visitor was
   useEffect(() => {
@@ -168,7 +165,7 @@ export default function App() {
         <div className="stage">
           <Boundary onError={() => { set({ screen: 'flat' }); useStore.getState().say('3D를 시작하지 못해 2D 화면으로 전환했어요.') }}>
             {/* the 3D scene is released while the register form is open: the photo picker needs the memory on phones */}
-            {registerSlot === undefined && !petOpen && <Suspense fallback={<div className="loading">섬을 불러오는 중…</div>}><World /></Suspense>}
+            {registerSlot === undefined && !petOpen && !avatarFor && <Suspense fallback={<div className="loading">섬을 불러오는 중…</div>}><World /></Suspense>}
           </Boundary>
           <Hud />
           <button className="home" onClick={() => set({ screen: 'landing' })} aria-label="처음으로">⌂</button>
@@ -179,6 +176,7 @@ export default function App() {
       {splash && <Splash />}
       <MarketModal />
       <PetModal />
+      <AvatarModal />
       {screen !== 'world' && <Toast />}
     </>
   )

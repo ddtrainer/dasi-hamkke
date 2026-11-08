@@ -20,7 +20,7 @@ export const SNACKS: Item[] = [
 export const GOODS: Item[] = [
   { id: 'balloon', icon: '🎈', name: '풍선', desc: '배낭에 묶는 둥실둥실 풍선' },
   { id: 'keyring', icon: '🔑', name: '하트 키링', desc: '배낭에 다는 하트 키링' },
-  { id: 'hairpin', icon: '🌸', name: '꽃 모자핀', desc: '밀짚모자에 꽂는 꽃' },
+  { id: 'hairpin', icon: '🌸', name: '꽃 머리핀', desc: '머리에 꽂는 꽃' },
 ]
 const TABS = [['missions', '🎯 미션'], ['clothes', '👕 옷'], ['snacks', '🦴 간식'], ['goods', '🎁 굿즈']] as const
 

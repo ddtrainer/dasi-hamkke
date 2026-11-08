@@ -20,6 +20,7 @@ export function useInputListeners() {
       game.keys.add(k)
       if (k === 'e' || k === 'enter') { e.preventDefault(); interactNearest() }
       if (k === 'c') toggleSit()
+      if (k === 'h') greetNearest()
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault()
     }
     const up = (e: KeyboardEvent) => game.keys.delete(e.key.toLowerCase())
@@ -58,6 +59,7 @@ export function toggleSit() {
   if (game.route.length) return
   game.wantSit = !game.wantSit
 }
+import { greetNearest } from './visitors'
 export function interactNearest() {
   const st = useStore.getState()
   // a stale openId (memorial no longer visible) must never swallow the button — clear it

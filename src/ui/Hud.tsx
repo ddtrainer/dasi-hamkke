@@ -5,6 +5,8 @@ import { interactNearest, toggleSit } from '../world/Player'
 import { goToSlot, goToDestination, stroll, loopWalk, stopWalk, PLACE_BY_ID } from '../world/actions'
 import { DESTINATIONS, SLOTS } from '../world/terrain'
 import { setMusic, setSfx } from '../lib/audio'
+import { greetNearest } from '../world/visitors'
+import { replyGreet, dismissGreet } from '../lib/greet'
 
 function Joystick() {
   const base = useRef<HTMLDivElement>(null)
@@ -33,7 +35,7 @@ function Joystick() {
 }
 
 export function Hud() {
-  const { phase, nearSlot, nearMarket, nearPlace, memorials, userId, sfx, music, quality, menuOpen, tod, set, toast } = useStore()
+  const { nearNeighbor, greetNote, phase, nearSlot, nearMarket, nearPlace, memorials, userId, sfx, music, quality, menuOpen, tod, set, toast } = useStore()
   const near = nearSlot !== null ? memorials.find((m) => m.slot === nearSlot) : undefined
   const mine = memorials.filter((m) => m.ownerId === userId)
   useEffect(() => { setSfx(sfx) }, [sfx])
@@ -48,6 +50,7 @@ export function Hud() {
         <button className="chip" onClick={() => set({ menuOpen: !menuOpen })}>🧭 이동</button>
         <button className="chip" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
         <button className="chip" onClick={() => set({ petOpen: true, petTarget: useStore.getState().companionId })}>🐶 내 아이</button>
+        <button className="chip" onClick={() => set({ avatarFor: 'change' })}>🧑 캐릭터</button>
         <span className="sp" />
         <button className="chip" onClick={() => set({ tod: tod === 'day' ? 'sunset' : tod === 'sunset' ? 'night' : 'day' })} aria-label="시간대">{tod === 'day' ? '☀️ 낮' : tod === 'sunset' ? '🌇 노을' : '🌙 밤'}</button>
         <button className={'chip' + (sfx ? ' on' : '')} onClick={() => set({ sfx: !sfx })} aria-label="효과음">{sfx ? '🔊' : '🔇'}</button>
@@ -79,6 +82,16 @@ export function Hud() {
       )}
       {nearSlot === null && !nearMarket && nearPlace && PLACE_BY_ID[nearPlace] && (
         <button className="interact" onClick={interactNearest}>{PLACE_BY_ID[nearPlace].icon} {PLACE_BY_ID[nearPlace].label} <kbd>E</kbd></button>
+      )}
+      {nearNeighbor && (
+        <button className="interact greet" onClick={greetNearest}>👋 {nearNeighbor.name}님에게 인사하기 <kbd>H</kbd></button>
+      )}
+      {greetNote && (
+        <div className="greetnote" role="status">
+          <span>{greetNote.text}</span>
+          <button onClick={() => void replyGreet()}>답례 👋</button>
+          <button className="x2" onClick={dismissGreet} aria-label="닫기">✕</button>
+        </div>
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
       {IS_MOBILE || matchMedia('(pointer: coarse)').matches ? (

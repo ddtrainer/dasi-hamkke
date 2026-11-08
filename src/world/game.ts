@@ -19,6 +19,7 @@ export const game = {
   stargaze: false, // lying on the stargazing hill: the camera looks up at the sky
   offerUntil: 0,
   treatUntil: 0,
+  waveUntil: 0, // the player is waving (a greeting)
   dog: { x: 0, y: 0, z: 0 },
   // fetch: a thrown ball, chased and brought back by the dog
   // summoning the dog out of a shrine photo: a bump of this counter restarts the emerge animation at (x, z); glow = light column
