@@ -1,4 +1,4 @@
--- "다시 함께" Supabase schema. Run in the SQL editor of a new project.
+-- "댕냥 메모리" Supabase schema. Run in the SQL editor of a new project.
 -- Also enable Authentication > Providers > "Anonymous sign-ins".
 -- STATUS: written but NOT yet executed against a live Supabase project.
 

@@ -4,6 +4,7 @@ import { startAudio, stopAudio } from '../lib/audio'
 import { Hud } from './Hud'
 import { ShrineModal, RegisterModal, Portrait } from './Modals'
 import { MarketModal } from './MarketModal'
+import { PetModal } from './PetModal'
 import { api } from '../lib/api'
 import { game } from '../world/game'
 import { resume, resumed, write } from '../lib/resume'
@@ -69,12 +70,12 @@ function Splash() {
   }
   const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn() }
   return (
-    <div className={'splash' + (out ? ' out' : '') + (paused ? ' paused' : '')} role="img" aria-label="다시 함께 섬 전경">
+    <div className={'splash' + (out ? ' out' : '') + (paused ? ' paused' : '')} role="img" aria-label="댕냥 메모리 섬 전경">
       <div className={'splash-pic' + (zoom ? ' zoomed' : '')} onClick={onPic}
         style={zoom ? { transform: 'scale(2.6)', transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}>
         <img src={import.meta.env.BASE_URL + 'island.webp'} alt="" draggable={false} />
       </div>
-      <div className="splash-cap"><b>다시 함께</b><span>너를 향한 내 마음과 숨결을 느껴봐<br />영원히 널 사랑해</span></div>
+      <div className="splash-cap"><b>댕냥 메모리</b><span>너를 향한 내 마음과 숨결을 느껴봐<br />영원히 널 사랑해</span></div>
       <div className="splash-bar"><i style={{ animationDuration: `${SPLASH_MS}ms` }} /></div>
       <div className="splash-ctl">
         <button className="splash-btn" onClick={stop(paused ? resume : pause)} aria-label={paused ? '계속' : '멈춤'}>{paused ? '▶ 계속' : '⏸ 멈춤'}</button>
@@ -99,11 +100,11 @@ function Landing() {
     <div className="landing">
       <div className="hero">
         <div className="paw">🐾</div>
-        <h1>다시 함께</h1>
-        <p className="sub">푸른 바다와 꽃이 가득한 작은 세상,<br />다시 만나 함께 걷고 행복을 나누는 시간.</p>
-        <p className="sub sub2">너를 향한 내 따뜻한 마음과 숨결이 닿기를.<br />언제나 사랑해, 영원히.</p>
+        <h1>댕냥 메모리</h1>
+        <p className="sub">푸른 바다와 꽃이 가득한 세상에서<br />다시 함께 걷고 행복을 나누는 시간.</p>
+        <p className="sub sub2">너를 향한 내 따뜻한 마음이 닿기를.<br />언제나 사랑해, 영원히.</p>
         {gl ? (
-          <button className="btn primary big" onClick={enter}>다시 함께 입장하기</button>
+          <button className="btn primary big" onClick={enter}>댕냥 메모리 입장하기</button>
         ) : (
           <p className="warn">이 브라우저에서는 3D를 실행할 수 없어요. 2D 추모 화면을 이용해 주세요.</p>
         )}
@@ -120,7 +121,7 @@ function Flat() {
   return (
     <div className="flat">
       <header>
-        <h1>🐾 다시 함께</h1>
+        <h1>🐾 댕냥 메모리</h1>
         <div className="row">
           <button className="btn primary" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
           {gl && <button className="btn" onClick={() => { startAudio(); game.introT = 0; game.camFocus = null; set({ screen: 'world', phase: 'intro', splash: true }) }}>🌸 3D 공원 입장</button>}
@@ -147,7 +148,7 @@ function saveSession() {
 }
 
 export default function App() {
-  const { screen, splash, registerSlot, set, refresh } = useStore()
+  const { screen, splash, registerSlot, petOpen, set, refresh } = useStore()
   useEffect(() => { void refresh() }, [refresh])
   // phone webviews can reload the page while the photo picker is open: remember where the visitor was
   useEffect(() => {
@@ -167,7 +168,7 @@ export default function App() {
         <div className="stage">
           <Boundary onError={() => { set({ screen: 'flat' }); useStore.getState().say('3D를 시작하지 못해 2D 화면으로 전환했어요.') }}>
             {/* the 3D scene is released while the register form is open: the photo picker needs the memory on phones */}
-            {registerSlot === undefined && <Suspense fallback={<div className="loading">섬을 불러오는 중…</div>}><World /></Suspense>}
+            {registerSlot === undefined && !petOpen && <Suspense fallback={<div className="loading">섬을 불러오는 중…</div>}><World /></Suspense>}
           </Boundary>
           <Hud />
           <button className="home" onClick={() => set({ screen: 'landing' })} aria-label="처음으로">⌂</button>
@@ -177,6 +178,7 @@ export default function App() {
       <RegisterModal />
       {splash && <Splash />}
       <MarketModal />
+      <PetModal />
       {screen !== 'world' && <Toast />}
     </>
   )

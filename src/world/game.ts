@@ -21,6 +21,9 @@ export const game = {
   treatUntil: 0,
   dog: { x: 0, y: 0, z: 0 },
   // fetch: a thrown ball, chased and brought back by the dog
+  // summoning the dog out of a shrine photo: a bump of this counter restarts the emerge animation at (x, z); glow = light column
+  summon: { n: 0, x: 0, z: 0 },
+  glow: { t: -1, x: 0, y: 0, z: 0 },
   ball: { s: 'none' as 'none' | 'fly' | 'rest' | 'carry', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 },
   camFocus: null as null | { x: number; y: number; z: number }, // debug/photo mode: look at something else
   // auto-walk

@@ -16,14 +16,14 @@ const marketSign = () => canvasTex(640, 210, (g) => {
   g.strokeStyle = '#7a5530'; g.lineWidth = 10; g.strokeRect(5, 5, 630, 200)
   g.fillStyle = '#fff6df'; g.beginPath(); g.arc(70, 78, 34, 0, 7); g.fill()
   g.fillStyle = '#c9843d'; g.font = '44px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🐾', 70, 80)
-  g.fillStyle = '#4a2f18'; g.font = `700 76px ${FONT}`; g.fillText('다시 함께 마켓', 360, 76)
+  g.fillStyle = '#4a2f18'; g.font = `700 62px ${FONT}`; g.fillText('댕냥 메모리 마켓', 365, 76)
   g.font = `32px ${FONT}`; g.fillStyle = '#6b4526'; g.fillText('반려동물 의류 · 간식 · 굿즈', 330, 156)
 })
 const chalk = () => canvasTex(256, 340, (g) => {
   g.fillStyle = '#2f3a34'; g.fillRect(0, 0, 256, 340)
   g.strokeStyle = '#e7d6b0'; g.lineWidth = 8; g.strokeRect(6, 6, 244, 328)
   g.fillStyle = '#fffbe9'; g.textAlign = 'center'; g.font = `700 36px ${FONT}`; g.fillText('오늘의 간식', 128, 70)
-  g.font = '110px sans-serif'; g.fillText('🦴', 128, 190); g.font = `28px ${FONT}`; g.fillText('다시 함께 마켓', 128, 290)
+  g.font = '110px sans-serif'; g.fillText('🦴', 128, 190); g.font = `24px ${FONT}`; g.fillText('댕냥 메모리 마켓', 128, 290)
 })
 
 const WOOD = '#e0b07a', BEAM = '#7a5232', ROOF = '#8b94a3'
@@ -34,7 +34,7 @@ const box = (w: number, h: number, d: number, color: string, pos: [number, numbe
   </mesh>
 )
 
-/** 다시 함께 마켓 — a cosy shop selling clothes, snacks and goods. Local +z is the shop front. */
+/** 댕냥 메모리 마켓 — a cosy shop selling clothes, snacks and goods. Local +z is the shop front. */
 export function Market() {
   const y = terrainHeight(MARKET.x, MARKET.z)
   const sign = useMemo(marketSign, [])

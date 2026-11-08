@@ -12,7 +12,7 @@ import { Reeds } from './Landmarks'
 import { Places, ShootingStars } from './Places'
 import { Shrines } from './Shrines'
 import { Market } from './Market'
-import { Avatar, Dog } from './Characters'
+import { Avatar, Dog, SummonGlow } from './Characters'
 import { PlayerController } from './Player'
 import { game, fx, lin, tod } from './game'
 
@@ -203,6 +203,7 @@ export function World() {
       <Market />
       <Avatar />
       <Dog />
+      <SummonGlow />
       <Petals count={hi ? 260 : 90} />
       <Clouds />
       <PlayerController />

@@ -99,7 +99,7 @@ export const PLACES = [
 export const BIG_TREE = { x: 10, z: -54 }
 export const WATERFALL = { x: 30, z: -35 }
 export const FENCE: V2[] = [[41, 15], [41.5, 20], [38, 25.5], [33.5, 30.5]]
-/** "다시 함께 마켓": local +z is the shop front, which faces west (towards the east footpath). */
+/** "댕냥 메모리 마켓": local +z is the shop front, which faces west (towards the east footpath). */
 export const MARKET = { x: 39.5, z: 7.5, ry: -Math.PI / 2, front: [34.5, 7.5] as V2 }
 export function marketToWorld(lx: number, lz: number): V2 {
   const c = Math.cos(MARKET.ry), s = Math.sin(MARKET.ry)
@@ -412,7 +412,7 @@ export const DESTINATIONS = {
   gazebo: { label: '언덕 위 전망대', p: [38, -44.5] as V2 },
   bigtree: { label: '언덕 위 큰 나무', p: [10, -50] as V2 },
   gate: { label: '입구 아치', p: [0, 41] as V2 },
-  market: { label: '다시 함께 마켓', p: MARKET.front },
+  market: { label: '댕냥 메모리 마켓', p: MARKET.front },
   lighthouse: { label: '등대 전망대', p: [-68.6, -7] as V2 },
   dogpark: { label: '반려견 놀이터', p: [-29.8, 10] as V2 },
   wish: { label: '추억의 숲', p: [-28.6, -11.5] as V2 },

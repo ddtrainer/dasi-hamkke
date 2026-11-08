@@ -7,6 +7,8 @@ import { defaultPortrait } from '../lib/image'
 import type { Memorial } from '../lib/types'
 import { goToSlot } from './actions'
 import { game } from './game'
+import { DogBody, EAR_BASE } from './DogModel'
+import { DEMO_PETS, type PetProfile } from '../lib/pet'
 
 function nameTexture(name: string, dates: string) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 128
@@ -58,6 +60,41 @@ function VisitorCandles({ n, seed }: { n: number; seed: number }) {
   )
 }
 
+/** The shrine's dog, sitting on the platform beside its photo while it is not out walking with its owner. */
+function RestingDog({ pet, x, z, ry }: { pet: PetProfile; x: number; z: number; ry: number }) {
+  const root = useRef<THREE.Group>(null!)
+  const rig = useRef<THREE.Group>(null!)
+  const legs = [useRef<THREE.Group>(null!), useRef<THREE.Group>(null!), useRef<THREE.Group>(null!), useRef<THREE.Group>(null!)]
+  const tail = useRef<THREE.Group>(null!)
+  const head = useRef<THREE.Group>(null!)
+  const earL = useRef<THREE.Group>(null!), earR = useRef<THREE.Group>(null!)
+  const tongue = useRef<THREE.Mesh>(null!)
+  const refs = { rig, legs, tail, head, earL, earR, tongue }
+  const wp = useMemo(() => new THREE.Vector3(), [])
+  useFrame(() => {
+    // only animate (and draw) when the visitor is near
+    root.current.getWorldPosition(wp)
+    const near = Math.hypot(game.pos.x - wp.x, game.pos.z - wp.z) < 40
+    root.current.visible = near
+    if (!near) return
+    const t = game.time
+    legs[0].current.rotation.x = legs[1].current.rotation.x = 0.55
+    legs[2].current.rotation.x = legs[3].current.rotation.x = -1.35
+    rig.current.rotation.x = -0.38; rig.current.position.y = 0.21
+    head.current.rotation.x = 0.5 + Math.sin(t * 1.4) * 0.04
+    head.current.rotation.y = Math.sin(t * 0.5 + x) * 0.3
+    tail.current.rotation.z = Math.sin(t * 5 + z) * 0.35
+    const base = EAR_BASE[pet.ears]
+    earL.current.rotation.z = base; earR.current.rotation.z = -base
+    tongue.current.visible = false
+  })
+  return (
+    <group ref={root} position={[x, 0.3, z]} rotation-y={ry} scale={0.58 * pet.size * 0.9}>
+      <DogBody pet={pet} outfit={null} refs={refs} />
+    </group>
+  )
+}
+
 function Shrine({ m, flowers, candles, mine }: { m: Memorial; flowers: number; candles: number; mine: boolean }) {
   const s = SLOTS[m.slot]
   // hillside: sit the platform on the uphill corner and carry a stone foundation down to the lowest ground
@@ -67,9 +104,17 @@ function Shrine({ m, flowers, candles, mine }: { m: Memorial; flowers: number; c
     return { y: Math.max(...hs) - 0.05, base: Math.max(...hs) - Math.min(...hs) }
   }, [s])
   const photo = usePhoto(m)
+  const pets = useStore((st) => st.pets)
+  const companionId = useStore((st) => st.companionId)
+  const dogPet = pets[m.id] ?? DEMO_PETS[m.id]
   const label = useMemo(() => nameTexture(m.petName, `${yr(m.birthDate)} – ${yr(m.passedDate)}`), [m.petName, m.birthDate, m.passedDate])
   const flames = [useRef<THREE.Mesh>(null!), useRef<THREE.Mesh>(null!)]
+  const photoGlow = useRef<THREE.MeshBasicMaterial>(null!)
   useFrame(() => {
+    // the photo frame lights up while its dog steps out of (or back into) it
+    const gl = game.glow
+    const lit = gl.t >= 0 && Math.hypot(gl.x - s.x, gl.z - s.z) < 5 ? Math.sin(Math.min(1, (gl.t / 2.6) * 1.15) * Math.PI) : 0
+    photoGlow.current.opacity = lit * 0.65
     flames.forEach((r, i) => {
       const f = 1 + Math.sin(game.time * 11 + m.slot + i * 2) * 0.12 + Math.sin(game.time * 17 + m.slot * 2 + i) * 0.08
       r.current.scale.set(f * 0.8, f * 1.2, f * 0.8)
@@ -113,10 +158,12 @@ function Shrine({ m, flowers, candles, mine }: { m: Memorial; flowers: number; c
       <mesh position={[0, 1.4, -0.12]}><cylinderGeometry args={[0.035, 0.035, 0.8, 6]} /><meshStandardMaterial color="#8a6a4c" /></mesh>
       <mesh position={[0, 1.95, -0.12]} castShadow><boxGeometry args={[1.12, 0.96, 0.08]} /><meshStandardMaterial color="#c8b794" roughness={0.8} /></mesh>
       <mesh position={[0, 1.95, -0.07]}><planeGeometry args={[0.92, 0.78]} /><meshBasicMaterial map={photo} toneMapped={false} /></mesh>
+      <mesh position={[0, 1.95, -0.055]} renderOrder={3}><planeGeometry args={[1.0, 0.86]} /><meshBasicMaterial ref={photoGlow} color="#fff0c4" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></mesh>
       {/* flowers laid on the step by visitors */}
       {Array.from({ length: Math.min(flowers, 10) }, (_, i) => (
         <mesh key={i} position={[-0.8 + i * 0.18, 0.22, 1.85 + (i % 2) * 0.1]}><icosahedronGeometry args={[0.08, 0]} /><meshStandardMaterial color={cols[i % cols.length]} flatShading /></mesh>
       ))}
+      {dogPet && companionId !== m.id && <RestingDog pet={dogPet} x={1.05} z={0.95} ry={0.45} />}
       {candles > 0 && <VisitorCandles n={candles} seed={m.slot} />}
       {mine && (
         <mesh position={[0, 4.5, 0]} rotation-x={Math.PI}><coneGeometry args={[0.16, 0.34, 4]} /><meshBasicMaterial color={priv ? '#9aa8ff' : '#ffd04a'} toneMapped={false} /></mesh>

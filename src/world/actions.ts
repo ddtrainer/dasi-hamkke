@@ -2,6 +2,7 @@ import { game, startAutoWalk, cancelAutoWalk } from './game'
 import { SLOTS, planRoute, routeThrough, DESTINATIONS, V2, NODES, LOOP_IDS, PLACES, canStand, groundHeight } from './terrain'
 import { useStore, saveMarket } from '../lib/store'
 import { chime } from '../lib/audio'
+import type { Memorial } from '../lib/types'
 
 export function walkTo(p: V2, label?: string, then?: () => void) {
   const route = planRoute([game.pos.x, game.pos.z], p)
@@ -79,3 +80,22 @@ export function placeAction(id: string) {
   }
 }
 export const PLACE_BY_ID = Object.fromEntries(PLACES.map((p) => [p.id, p]))
+
+/** Light the shrine photo and let its dog step out to walk with the visitor. */
+export function summonCompanion(m: Memorial) {
+  const st = useStore.getState()
+  st.setCompanion(m.id)
+  const s = SLOTS[m.slot]
+  game.summon.x = s.x + Math.sin(s.ry) * 1.9; game.summon.z = s.z + Math.cos(s.ry) * 1.9; game.summon.n++
+  game.glow.t = 0; game.glow.x = game.summon.x; game.glow.z = game.summon.z; game.glow.y = groundHeight(game.summon.x, game.summon.z)
+  chime()
+  st.say(`✨ 사진 속에서 ${m.petName}이(가) 걸어 나왔어요. 이제 함께 걸어요 💕`)
+}
+/** Send the dog back to rest beside its photo. */
+export function restCompanion() {
+  const st = useStore.getState()
+  const m = st.memorials.find((x) => x.id === st.companionId)
+  game.glow.t = 0; game.glow.x = game.dog.x; game.glow.y = game.dog.y; game.glow.z = game.dog.z
+  st.setCompanion(null)
+  st.say(m ? `🌙 ${m.petName}이(가) 분향소 사진 옆에서 쉬어요. 언제든 다시 불러 주세요.` : '쉬러 갔어요.')
+}

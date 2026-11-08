@@ -8,6 +8,8 @@ import { resume } from '../lib/resume'
 import { offerFlowersAnim } from '../world/Player'
 import { game } from '../world/game'
 import { SLOTS } from '../world/terrain'
+import { PetEditor, coatFromPhoto } from './PetModal'
+import { DEFAULT_PET, type PetProfile } from '../lib/pet'
 
 const fmt = (d: string) => (d ? d.split('-').join('.') : '—')
 
@@ -18,7 +20,7 @@ export function Portrait({ m, className }: { m: Memorial; className?: string }) 
 }
 
 export function ShrineModal() {
-  const { openId, memorials, userId, refresh, say, set, screen } = useStore()
+  const { openId, memorials, userId, refresh, say, set, screen, pets, companionId, setCompanion } = useStore()
   const m = memorials.find((x) => x.id === openId)
   const [tributes, setTributes] = useState<Tribute[]>([])
   const [letter, setLetter] = useState('')
@@ -60,6 +62,18 @@ export function ShrineModal() {
       setTributes((x) => [...x, t]); setLetter(''); setWriting(false); say('편지를 남겼어요. 편지는 주인과 작성자에게만 보여요.')
     } catch (e) { say((e as Error).message) } finally { setBusy(false) }
   }
+  const hasDog = mine && !!pets[m.id]
+  const isOut = companionId === m.id
+  const call = async () => {
+    close()
+    if (screen === 'world') { const { summonCompanion } = await import('../world/actions'); summonCompanion(m) }
+    else { setCompanion(m.id); say(`✨ ${m.petName}이(가) 함께해요. 3D 공원에서 만나요.`) }
+  }
+  const restDog = async () => {
+    close()
+    if (screen === 'world') { const { restCompanion } = await import('../world/actions'); restCompanion() }
+    else { setCompanion(null); say(`🌙 ${m.petName}이(가) 쉬러 갔어요.`) }
+  }
   const toggle = async () => {
     const v: Visibility = m.visibility === 'public' ? 'private' : 'public'
     try { await api.setVisibility(m.id, v); await refresh(); say(v === 'private' ? '비공개로 전환했어요.' : '공개로 전환했어요.') } catch (e) { say((e as Error).message) }
@@ -77,6 +91,9 @@ export function ShrineModal() {
         <p className="dates">{fmt(m.birthDate)} – {fmt(m.passedDate)}</p>
         <p className="msg">“{m.message || '고마웠어. 사랑해.'}”</p>
         <p className="meta">🌸 헌화 {flowers}송이 · 🕯️ 촛불 {candles}개 {mine && <span className={'badge ' + m.visibility}>{m.visibility === 'public' ? '공개' : '비공개'}</span>}</p>
+        {hasDog && (
+          <button className="btn primary call" onClick={isOut ? restDog : call}>{isOut ? `🌙 ${m.petName} 쉬게 하기` : `✨ ${m.petName}, 섬에서 다시 함께하기`}</button>
+        )}
         <div className="row">
           <button className="btn primary" disabled={busy} onClick={offer}>🌸 헌화하기</button>
           <button className="btn" disabled={busy || litByMe} onClick={light}>{litByMe ? '🕯️ 오늘 촛불을 켰어요' : '🕯️ 촛불 켜기'}</button>
@@ -100,19 +117,27 @@ export function ShrineModal() {
 }
 
 export function RegisterModal() {
-  const { registerSlot, memorials, userId, set, refresh, say } = useStore()
+  const { registerSlot, memorials, userId, set, refresh, say, setPetFor } = useStore()
   const [f, setF0] = useState(resume.draft ?? { petName: '', species: '강아지', birthDate: '', passedDate: '', message: '', visibility: 'public' as Visibility })
   const setF = (v: typeof f) => { resume.draft = v; setF0(v) }
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [dog, setDog] = useState<PetProfile>(DEFAULT_PET)
+  const [dogOpen, setDogOpen] = useState(false)
+  const [fitted, setFitted] = useState(false)
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
   if (registerSlot === undefined) return null
   const close = () => set({ registerSlot: undefined })
   const myCount = memorials.filter((x) => x.ownerId === userId).length
   const pick = async (file?: File) => {
     if (!file) return
-    try { const b = await sanitizePhoto(file); setPhoto(b); setPreview(URL.createObjectURL(b)) } catch (e) { say((e as Error).message) }
+    try {
+      const b = await sanitizePhoto(file); const url = URL.createObjectURL(b); setPhoto(b); setPreview(url)
+      // the dog starts out in the colours of the photographed pet (the visitor can still change everything)
+      const c = await coatFromPhoto(url)
+      if (c) { setDog((d) => ({ ...d, ...c })); setFitted(true); setDogOpen(true) }
+    } catch (e) { say((e as Error).message) }
   }
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,6 +145,7 @@ export function RegisterModal() {
     setBusy(true)
     try {
       const rec = await api.create({ ...f, photo }, registerSlot ?? undefined)
+      if (f.species === '강아지') setPetFor(rec.id, { ...dog, name: rec.petName })
       resume.draft = null
       await refresh(); close(); say(`${rec.petName}의 분향소를 만들었어요.`)
       if (useStore.getState().screen === 'world') {
@@ -153,6 +179,15 @@ export function RegisterModal() {
           <small>사진은 자동으로 작게 줄여 저장돼요. 갤러리 사진이 안 보이면 폰 설정에서 브라우저의 '사진 및 동영상' 권한을 허용해 주세요. 사진 없이도 만들 수 있어요.</small>
         </div>
         {preview && <img className="preview" src={preview} alt="미리보기" />}
+        {f.species === '강아지' ? (
+          <details className="dogform" open={dogOpen} onToggle={(e) => setDogOpen((e.target as HTMLDetailsElement).open)}>
+            <summary>🐶 섬에서 다시 만날 모습 꾸미기 (추천)</summary>
+            <p className="hint">{fitted ? '✨ 올려 주신 사진의 색으로 먼저 맞춰 봤어요. 우리 아이와 더 닮게 고쳐 주세요.' : '분향소를 만들면 사진 속 아이가 섬으로 걸어 나와 함께 걸어요. 우리 아이와 닮게 꾸며 주세요.'} 나중에 언제든 고칠 수 있어요.</p>
+            <PetEditor d={dog} setD={setDog} photoUrl={preview} />
+          </details>
+        ) : (
+          <p className="hint">🐾 강아지 외의 아이들이 섬을 함께 걷는 모습은 곧 만나볼 수 있어요.</p>
+        )}
         <fieldset><legend>공개 범위</legend>
           <label className="radio"><input type="radio" checked={f.visibility === 'public'} onChange={() => setF({ ...f, visibility: 'public' })} /> 공개 — 다른 방문자도 볼 수 있어요</label>
           <label className="radio"><input type="radio" checked={f.visibility === 'private'} onChange={() => setF({ ...f, visibility: 'private' })} /> 비공개 — 나만 볼 수 있어요</label>

@@ -48,9 +48,9 @@ export function MarketModal() {
   const list = tab === 'clothes' ? CLOTHES : tab === 'snacks' ? SNACKS : tab === 'goods' ? GOODS : []
   return (
     <div className="overlay" onClick={close}>
-      <div className="card market" role="dialog" aria-label="다시 함께 마켓" onClick={(e) => e.stopPropagation()}>
+      <div className="card market" role="dialog" aria-label="댕냥 메모리 마켓" onClick={(e) => e.stopPropagation()}>
         <button className="x" onClick={close} aria-label="닫기">✕</button>
-        <h2>🛍️ 다시 함께 마켓</h2>
+        <h2>🛍️ 댕냥 메모리 마켓</h2>
         <p className="hint">반려동물 옷 · 간식 · 굿즈 — 체험용 가상 상점이에요. 미션에 성공해 받은 🎟️ 티켓으로 바꿔요.</p>
         <div className="tabs">{TABS.map(([k, label]) => (<button key={k} className={'tab' + (tab === k ? ' on' : '')} onClick={() => setTab(k)}>{label}</button>))}</div>
         {tab === 'missions' ? <MissionBoard /> : <p className="hint">내 티켓: 🎟️ {tickets}장 · 아이템 1개 = 티켓 1장</p>}

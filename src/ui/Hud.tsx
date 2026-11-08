@@ -47,6 +47,7 @@ export function Hud() {
       <div className="topbar">
         <button className="chip" onClick={() => set({ menuOpen: !menuOpen })}>🧭 이동</button>
         <button className="chip" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
+        <button className="chip" onClick={() => set({ petOpen: true, petTarget: useStore.getState().companionId })}>🐶 내 아이</button>
         <span className="sp" />
         <button className="chip" onClick={() => set({ tod: tod === 'day' ? 'sunset' : tod === 'sunset' ? 'night' : 'day' })} aria-label="시간대">{tod === 'day' ? '☀️ 낮' : tod === 'sunset' ? '🌇 노을' : '🌙 밤'}</button>
         <button className={'chip' + (sfx ? ' on' : '')} onClick={() => set({ sfx: !sfx })} aria-label="효과음">{sfx ? '🔊' : '🔇'}</button>
@@ -74,7 +75,7 @@ export function Hud() {
         </button>
       )}
       {nearSlot === null && nearMarket && (
-        <button className="interact" onClick={interactNearest}>🛍️ 다시 함께 마켓 열기 <kbd>E</kbd></button>
+        <button className="interact" onClick={interactNearest}>🛍️ 댕냥 메모리 마켓 열기 <kbd>E</kbd></button>
       )}
       {nearSlot === null && !nearMarket && nearPlace && PLACE_BY_ID[nearPlace] && (
         <button className="interact" onClick={interactNearest}>{PLACE_BY_ID[nearPlace].icon} {PLACE_BY_ID[nearPlace].label} <kbd>E</kbd></button>
