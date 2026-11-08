@@ -75,7 +75,7 @@ function Splash() {
         style={zoom ? { transform: 'scale(2.6)', transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}>
         <img src={import.meta.env.BASE_URL + 'island.webp'} alt="" draggable={false} />
       </div>
-      <div className="splash-cap"><b>댕냥 메모리</b><span>너를 향한 내 마음과 숨결을 느껴봐<br />영원히 널 사랑해</span></div>
+      <div className="splash-cap"><b>댕<i className="nyang">냥</i> 메모리</b><span>너를 향한 내 마음과 숨결을 느껴봐<br />영원히 널 사랑해</span></div>
       <div className="splash-bar"><i style={{ animationDuration: `${SPLASH_MS}ms` }} /></div>
       <div className="splash-ctl">
         <button className="splash-btn" onClick={stop(paused ? resume : pause)} aria-label={paused ? '계속' : '멈춤'}>{paused ? '▶ 계속' : '⏸ 멈춤'}</button>
@@ -100,7 +100,7 @@ function Landing() {
     <div className="landing">
       <div className="hero">
         <div className="paw">🐾</div>
-        <h1>댕냥 메모리</h1>
+        <h1>댕<span className="nyang">냥</span> 메모리</h1>
         <p className="sub">푸른 바다와 꽃이 가득한 세상에서<br />다시 함께 걷고 행복을 나누는 시간.</p>
         <p className="sub sub2">너를 향한 내 따뜻한 마음이 닿기를.<br />언제나 사랑해, 영원히.</p>
         {gl ? (
@@ -121,7 +121,7 @@ function Flat() {
   return (
     <div className="flat">
       <header>
-        <h1>🐾 댕냥 메모리</h1>
+        <h1>🐾 댕<span className="nyang">냥</span> 메모리</h1>
         <div className="row">
           <button className="btn primary" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
           {gl && <button className="btn" onClick={() => { startAudio(); game.introT = 0; game.camFocus = null; set({ screen: 'world', phase: 'intro', splash: true }) }}>🌸 3D 공원 입장</button>}

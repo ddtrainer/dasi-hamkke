@@ -188,3 +188,7 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 .dogform { border: 1px solid #f0dfc4; border-radius: 14px; padding: 8px 10px; background: #fffaf0; }
 .dogform > summary { cursor: pointer; font-weight: 600; color: #8a5a2c; padding: 4px 0; }
 .dogform[open] { display: flex; flex-direction: column; gap: 8px; }
+
+/* the 냥 of the name is coral pink, like on the sign */
+.nyang { color: #fc6860; font-style: normal; }
+.splash-cap b .nyang { color: #ff7a72; }
