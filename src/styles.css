@@ -218,3 +218,15 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 .greetnote { position: absolute; top: 104px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: #fffdf8f2; border-radius: 999px; padding: 8px 8px 8px 16px; box-shadow: 0 6px 20px #0003; font-size: .92rem; z-index: 25; animation: pop .25s; max-width: 94vw; }
 .greetnote button { border: none; background: #ffe0a8; border-radius: 999px; padding: 7px 12px; font-size: .85rem; }
 .greetnote button.x2 { background: none; padding: 4px 8px; color: #8a7b68; }
+
+/* island lap run */
+.runhud { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: min(420px, 92vw); background: #fffdf8f2; border-radius: 18px; padding: 12px 14px; box-shadow: 0 6px 20px #0003; z-index: 24; font-size: .9rem; display: flex; flex-direction: column; gap: 6px; text-align: center; }
+.runhud p { margin: 0; line-height: 1.5; }
+.runhud small { color: #7a6d5e; }
+.runhud .rtop { display: flex; justify-content: space-between; align-items: baseline; }
+.runhud .rbar { height: 12px; background: #f3e6ee; border-radius: 999px; overflow: hidden; }
+.runhud .rbar i { display: block; height: 100%; background: linear-gradient(90deg, #ffb3d0, #f77fae); border-radius: 999px; transition: width .25s; }
+.runhud .rsub { color: #6b5b48; font-size: .82rem; }
+.runhud .rrow { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.runhud .rrow button { border: none; background: #ffe0a8; border-radius: 999px; padding: 8px 14px; font-size: .88rem; }
+.runhud .rrow button.big { background: #ffb3d0; font-size: 1.05rem; padding: 12px 22px; }

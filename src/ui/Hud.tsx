@@ -6,6 +6,8 @@ import { goToSlot, goToDestination, stroll, loopWalk, stopWalk, PLACE_BY_ID } fr
 import { DESTINATIONS, SLOTS } from '../world/terrain'
 import { setMusic, setSfx } from '../lib/audio'
 import { greetNearest } from '../world/visitors'
+import { startLapRun } from '../world/lapRun'
+import { RunHud } from './RunHud'
 import { replyGreet, dismissGreet } from '../lib/greet'
 
 function Joystick() {
@@ -62,7 +64,8 @@ export function Hud() {
         <div className="menu" onClick={() => set({ menuOpen: false })}>
           <h4>자동 이동</h4>
           <button onClick={stroll}>🚶 산책로 따라 걷기</button>
-          <button onClick={loopWalk}>🐕 반려견과 섬 한 바퀴</button>
+          <button onClick={loopWalk}>🚶 구경하며 섬 한 바퀴 (자동 걷기)</button>
+          <button onClick={() => void startLapRun()}>🏃 달려서 섬 한 바퀴 (미션)</button>
           {(Object.keys(DESTINATIONS) as (keyof typeof DESTINATIONS)[]).map((k) => (<button key={k} onClick={() => goToDestination(k)}>📍 {DESTINATIONS[k].label}</button>))}
           {mine.length > 0 && <h4>내 분향소</h4>}
           {mine.map((m) => (<button key={m.id} onClick={() => goToSlot(m.slot)}>🌸 {m.petName}</button>))}
@@ -83,6 +86,7 @@ export function Hud() {
       {nearSlot === null && !nearMarket && nearPlace && PLACE_BY_ID[nearPlace] && (
         <button className="interact" onClick={interactNearest}>{PLACE_BY_ID[nearPlace].icon} {PLACE_BY_ID[nearPlace].label} <kbd>E</kbd></button>
       )}
+      <RunHud />
       {nearNeighbor && (
         <button className="interact greet" onClick={greetNearest}>👋 {nearNeighbor.name}님에게 인사하기 <kbd>H</kbd></button>
       )}

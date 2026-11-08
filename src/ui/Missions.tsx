@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore, saveMarket } from '../lib/store'
 import { kstDay } from '../lib/api'
 import { chime } from '../lib/audio'
-import { GRAV, PULSE_CFG, makePulseDetector } from '../lib/pulse'
+import { LAP_STEPS, startLapRun } from '../world/lapRun'
 
 export const MISSIONS = [
   { id: 'breath', icon: '🌊', name: '해변에서 함께 숨 쉬기', desc: '바다를 바라보며 천천히 3번 숨 쉬어요' },
   { id: 'rps', icon: '✌️', name: '가위바위보', desc: '반려견과 3판 2선승' },
   { id: 'slot', icon: '🐾', name: '행운 뽑기', desc: '그림 3개를 맞추면 성공 (5번 기회)' },
-  { id: 'run', icon: '🏃', name: '슬로우 러닝', desc: '폰을 들고 달려 숨핏 펄스 100을 채워요' },
+  { id: 'run', icon: '🏃', name: '섬 한 바퀴 슬로우 러닝', desc: '폰을 들고 달려 반려견과 섬을 한 바퀴 돌아요' },
 ] as const
 type MissionId = (typeof MISSIONS)[number]['id']
 
@@ -161,84 +161,13 @@ function Slot({ onWin }: { onWin: () => void }) {
   )
 }
 
-// ---- slow running: counts steps with the phone's motion sensor (accelerometer) ----
-const RUN_SEC = 180, RUN_STEPS = 100 // reach 100 숨핏 pulses (slow-running profile) within 3 minutes
-type Sensor = 'idle' | 'asking' | 'denied' | 'none' | 'ok'
-function SlowRun({ onWin }: { onWin: () => void }) {
-  const [state, setState] = useState<'ready' | 'run' | 'win' | 'fail'>('ready')
-  const [sensor, setSensor] = useState<Sensor>('idle')
-  const [steps, setSteps] = useState(0), [sec, setSec] = useState(0)
-  const stepsRef = useRef(0), seen = useRef(false)
-  const det = useRef(makePulseDetector(PULSE_CFG.slow.amp, PULSE_CFG.slow.gap))
-  const winRef = useRef(onWin); winRef.current = onWin
-  const lock = useRef<{ release: () => Promise<void> } | null>(null)
-  const finish = useRef<() => void>(() => {})
-
-  // one stable listener for the whole life of the component (re-renders must not orphan it). Same method as 숨핏: |a| - g peaks.
-  const onMotion = useRef((e: DeviceMotionEvent) => {
-    const g = e.accelerationIncludingGravity, a = e.acceleration
-    let dyn: number | null = null
-    if (g && g.x != null) dyn = Math.hypot(g.x || 0, g.y || 0, g.z || 0) - GRAV
-    else if (a && a.x != null) dyn = Math.hypot(a.x, a.y || 0, a.z || 0)
-    if (dyn == null) return
-    seen.current = true
-    const n = det.current.add(dyn, performance.now())
-    if (n) { stepsRef.current += n; setSteps(stepsRef.current); if (stepsRef.current >= RUN_STEPS) finish.current() }
-  }).current
-  const stop = () => { window.removeEventListener('devicemotion', onMotion); lock.current?.release().catch(() => {}); lock.current = null }
-  useEffect(() => stop, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const start = async () => {
-    setSensor('asking')
-    try {
-      const DME = window.DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> } | undefined
-      if (!DME) { setSensor('none'); return }
-      if (typeof DME.requestPermission === 'function' && (await DME.requestPermission()) !== 'granted') { setSensor('denied'); return }
-    } catch { setSensor('denied'); return }
-    stepsRef.current = 0; seen.current = false; det.current = makePulseDetector(PULSE_CFG.slow.amp, PULSE_CFG.slow.gap)
-    finish.current = () => { stop(); setState('win'); winRef.current() }
-    setSteps(0); setSec(0); setSensor('ok'); setState('run')
-    window.addEventListener('devicemotion', onMotion)
-    try { lock.current = await (navigator as unknown as { wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock?.request('screen') ?? null } catch { /* optional */ }
-  }
-  useEffect(() => {
-    if (state !== 'run') return
-    const h = window.setTimeout(() => {
-      const t = sec + 1
-      setSec(t)
-      if (t === 4 && !seen.current) { stop(); setSensor('none'); setState('ready'); return }
-      if (t >= RUN_SEC) { stop(); setState(stepsRef.current >= RUN_STEPS ? 'win' : 'fail') }
-    }, 1000)
-    return () => clearTimeout(h)
-  }, [state, sec]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const spm = sec > 5 ? Math.round((steps / sec) * 60) : 0
-  const pct = Math.min(100, Math.round((steps / RUN_STEPS) * 100))
-  const mm = (n: number) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`
+// ---- island lap run: the old slow-running mission is merged into the lap (see world/lapRun.ts) ----
+function RunLauncher({ done }: { done: boolean }) {
+  const { set } = useStore()
   return (
     <div className="mg">
-      {state === 'ready' && (
-        <>
-          <p className="mg-say">폰을 손에 쥐거나 주머니에 넣고<br />반려견과 함께 가볍게 달려요.<br /><small>3분 안에 <b>숨핏 펄스 {RUN_STEPS}</b>을 채우면 성공이에요.<br />화면은 켜 두고, 주변을 살피며 안전하게 해주세요.</small></p>
-          {sensor === 'none' && <p className="mg-warn">움직임 센서를 찾지 못했어요. 폰의 브라우저(https 주소)에서 열어 주세요. 앱 안 화면에서는 센서가 막혀 있을 수 있어요.</p>}
-          {sensor === 'denied' && <p className="mg-warn">모션 센서 권한이 필요해요. 폰 설정에서 이 사이트의 동작 및 방향 접근을 허용해 주세요.</p>}
-          <button className="btn primary big" onClick={start} disabled={sensor === 'asking'}>🏃 달리기 시작</button>
-        </>
-      )}
-      {state === 'run' && (
-        <>
-          <div className="run-ring" style={{ background: `conic-gradient(#f77fae ${pct * 3.6}deg, #f3e6ee 0)` }}><span>{steps}<small>펄스</small></span></div>
-          <p className="mg-say">남은 시간 {mm(RUN_SEC - sec)} · 목표 펄스 {RUN_STEPS}<br /><small>{steps === 0 ? '리듬이 잡힐 때까지 계속 달려 주세요…' : spm ? `분당 ${spm} 펄스` : '측정 중…'}</small></p>
-          <button className="btn ghost" onClick={() => { stop(); setState('ready') }}>그만하기</button>
-        </>
-      )}
-      {state === 'win' && <p className="mg-say">🎉 해냈어요! 펄스 {steps}! 함께 달렸어요.<br /><small>숨이 차면 천천히 걸으며 숨을 골라 주세요 💕</small></p>}
-      {state === 'fail' && (
-        <>
-          <p className="mg-say">아쉬워요, 펄스 {steps}이었어요.<br /><small>목표는 {RUN_STEPS}이에요. 조금만 더 속도를 내서 다시 해봐요.</small></p>
-          <button className="btn primary big" onClick={() => setState('ready')}>다시 도전하기</button>
-        </>
-      )}
+      <p className="mg-say">폰을 손에 쥐거나 주머니에 넣고 가볍게 달려요.<br />내가 달린 만큼 캐릭터가 반려견과 함께<br />섬을 한 바퀴 돌아요. 🐕🏃<br /><small>3분 안에 <b>숨핏 펄스 {LAP_STEPS}</b>을 채우면 완주예요.<br />주변을 살피며 안전하게, 화면은 켜 두세요.<br />{done ? '오늘 보상은 받았지만 다시 달려 볼 수 있어요.' : '완주하면 🎟️ 티켓 1장!'}</small></p>
+      <button className="btn primary big" onClick={() => { set({ marketOpen: false }); void startLapRun() }}>🏃 섬 한 바퀴 달리기</button>
     </div>
   )
 }
@@ -277,7 +206,7 @@ function Play({ id, back, title }: { id: MissionId; back: () => void; title: str
       {id === 'breath' && <Breath onWin={win} />}
       {id === 'rps' && <Rps onWin={win} />}
       {id === 'slot' && <Slot onWin={win} />}
-      {id === 'run' && <SlowRun onWin={win} />}
+      {id === 'run' && <RunLauncher done={done} />}
       <p className="hint">{done ? '🎟️ 오늘 보상을 받았어요.' : '성공하면 🎟️ 1장'} · 내 티켓 {tickets}장</p>
     </>
   )

@@ -6,6 +6,7 @@ import { ShrineModal, RegisterModal, Portrait } from './Modals'
 import { MarketModal } from './MarketModal'
 import { PetModal } from './PetModal'
 import { AvatarModal } from './AvatarModal'
+import { stopLapRun } from '../world/lapRun'
 import { api } from '../lib/api'
 import { game } from '../world/game'
 import { resume, resumed, write } from '../lib/resume'
@@ -156,7 +157,7 @@ export default function App() {
     if (resumed?.screen === 'world' && resumed.reg) useStore.getState().say('화면이 다시 불러와졌어요. 사진을 다시 골라 주세요.')
     return () => { document.removeEventListener('visibilitychange', onHide); removeEventListener('pagehide', saveSession); unsub() }
   }, [])
-  useEffect(() => { if (screen !== 'world') stopAudio() }, [screen])
+  useEffect(() => { if (screen !== 'world') { stopAudio(); stopLapRun() } }, [screen])
   return (
     <>
       {screen === 'landing' && <Landing />}

@@ -60,6 +60,7 @@ export function toggleSit() {
   game.wantSit = !game.wantSit
 }
 import { greetNearest } from './visitors'
+import { lap, lapMove } from './lapRun'
 export function interactNearest() {
   const st = useStore.getState()
   // a stale openId (memorial no longer visible) must never swallow the button — clear it
@@ -115,7 +116,8 @@ export function PlayerController() {
     let iz = (k.has('s') || k.has('arrowdown') ? 1 : 0) - (k.has('w') || k.has('arrowup') ? 1 : 0)
     ix += game.joy.x; iz += game.joy.y
     const mag = Math.hypot(ix, iz)
-    const manual = mag > 0.12
+    const lapOn = lap.on
+    const manual = mag > 0.12 && !lapOn // a lap run is driven by the runner's footfalls, not by the stick
     if (manual) { cancelAutoWalk(); game.wantSit = false }
     if (!game.wantSit) game.stargaze = false
     const run = k.has('shift') || game.runToggle || mag > 1.15 || (game.joy.x ** 2 + game.joy.y ** 2) > 0.85
@@ -139,7 +141,10 @@ export function PlayerController() {
 
     const offering = game.time < game.offerUntil
     let moved = false
-    if (offering) {
+    if (lapOn) {
+      moved = lapMove(dt)
+      game.anim = moved ? 'run' : 'idle'
+    } else if (offering) {
       game.anim = 'offer'
     } else if (speedMul > 0) {
       const spd = (run && manual ? 6.4 : manual ? 3.4 : 3.8) * speedMul
@@ -195,7 +200,7 @@ export function PlayerController() {
       const kx = 1 - Math.exp(-dt * 7), ky = 1 - Math.exp(-dt * 3.5)
       cam.tx += (fx0 - cam.tx) * kx; cam.tz += (fz0 - cam.tz) * kx; cam.ty += (fy0 - cam.ty) * ky
     }
-    const walkingForward = game.route.length > 0 || (mag > 0.12 && iz < -0.25 && Math.abs(ix) < 0.5)
+    const walkingForward = game.route.length > 0 || (lapOn && moved) || (mag > 0.12 && iz < -0.25 && Math.abs(ix) < 0.5)
     if (!f && walkingForward && moved && game.time - cam.dragAt > 1.6) {
       const want = game.heading + Math.PI
       const diff = Math.atan2(Math.sin(want - game.camYaw), Math.cos(want - game.camYaw))

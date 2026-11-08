@@ -62,6 +62,7 @@ interface S {
   pets: Record<string, PetProfile> // each memorial's dog, by memorial id
   companionId: string | null // memorial whose dog is walking with the visitor
   petOpen: boolean
+  lapUi: { status: 'idle' | 'asking' | 'denied' | 'none' | 'run' | 'win' | 'tapdone' | 'fail'; mode: 'sensor' | 'tap'; steps: number; sec: number } // island lap run
   nearNeighbor: { id: string; name: string } | null // someone close enough to greet
   greetNote: { ids: string[]; names: string[]; text: string; t: number } | null // 'X greeted you' note
   avatar: AvatarId // the person the visitor plays
@@ -81,7 +82,7 @@ interface S {
 let toastT: number | undefined
 export const useStore = create<S>((set, get) => ({
   screen: resumed?.screen === 'world' ? 'world' : 'landing', phase: resumed?.screen === 'world' ? 'play' : 'intro', splash: false, quality: IS_MOBILE ? 'low' : 'high', tod: 'day', sfx: true, music: false,
-  userId: '', memorials: [], flowerCounts: {}, candleCounts: {}, openId: null, registerSlot: resumed?.screen === 'world' && resumed.reg ? resumed.regSlot : undefined, nearSlot: null, nearMarket: false, nearPlace: null, pet: loadPet(), pets: loadPets(), companionId: loadCompanion(), petOpen: false, nearNeighbor: null, greetNote: null, avatar: loadAvatar(), avatarFor: null, petTarget: null, rested: loadRested(), marketOpen: false, ...loadMarket(), menuOpen: false, toast: null,
+  userId: '', memorials: [], flowerCounts: {}, candleCounts: {}, openId: null, registerSlot: resumed?.screen === 'world' && resumed.reg ? resumed.regSlot : undefined, nearSlot: null, nearMarket: false, nearPlace: null, pet: loadPet(), pets: loadPets(), companionId: loadCompanion(), petOpen: false, lapUi: { status: 'idle', mode: 'sensor', steps: 0, sec: 0 }, nearNeighbor: null, greetNote: null, avatar: loadAvatar(), avatarFor: null, petTarget: null, rested: loadRested(), marketOpen: false, ...loadMarket(), menuOpen: false, toast: null,
   set: (p) => set(p),
   setPetFor: (id, p) => { const pets = { ...get().pets, [id]: p }; savePets(pets); set({ pets }) },
   markRested: (id) => { const rested = [...new Set([...get().rested, id])]; try { localStorage.setItem('dasi.rested', JSON.stringify(rested)) } catch { /* ignore */ } set({ rested }) },
