@@ -20,6 +20,8 @@ export const game = {
   stargaze: false, // lying on the stargazing hill: the camera looks up at the sky
   offerUntil: 0,
   treatUntil: 0,
+  feed: { t: -1, icon: '🦴' }, // giving a snack: t = seconds since the snack was held out (-1 = not feeding)
+  dogHidden: false, // the dog is waiting beside its photo, not out with the visitor
   waveUntil: 0, // the player is waving (a greeting)
   dog: { x: 0, y: 0, z: 0 },
   // fetch: a thrown ball, chased and brought back by the dog
@@ -27,6 +29,7 @@ export const game = {
   summon: { n: 0, x: 0, z: 0 },
   glow: { t: -1, x: 0, y: 0, z: 0 },
   ball: { s: 'none' as 'none' | 'fly' | 'rest' | 'carry', x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 },
+  watchDog: false, // camera follows the dog up close
   camFocus: null as null | { x: number; y: number; z: number }, // debug/photo mode: look at something else
   // auto-walk
   route: [] as V2[],
@@ -40,6 +43,15 @@ export function benchSeat(b: { x: number; z: number; ry: number }, lx: number) {
   return { x: b.x + lx * Math.cos(b.ry), z: b.z - lx * Math.sin(b.ry) }
 }
 export const BENCH_SEAT_Y = 0.49
+/** Hold a snack out to the dog: it trots over, sits, eats and is happy. Returns false when there is no dog out to feed. */
+export const FEED_LEN = 4.6
+export function startFeed(icon: string): boolean {
+  if (game.dogHidden) return false
+  game.feed = { t: 0, icon }
+  game.offerUntil = game.time + 3.2
+  game.wantSit = false
+  return true
+}
 export function cancelAutoWalk() { game.route = []; game.onArrive = null }
 export function startAutoWalk(route: V2[], onArrive?: () => void) {
   game.route = route.slice()

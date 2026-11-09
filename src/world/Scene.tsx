@@ -14,6 +14,7 @@ import { Shrines } from './Shrines'
 import { Market } from './Market'
 import { Avatar, Dog, SummonGlow } from './Characters'
 import { Neighbors } from './Neighbors'
+import { FeedFx } from './FeedFx'
 import { PlayerController } from './Player'
 import { game, fx, lin, tod } from './game'
 
@@ -205,6 +206,7 @@ export function World() {
       <Avatar />
       <Dog />
       <SummonGlow />
+      <FeedFx />
       <Neighbors />
       <Petals count={hi ? 260 : 90} />
       <Clouds />

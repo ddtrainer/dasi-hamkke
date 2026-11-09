@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore, IS_MOBILE } from '../lib/store'
 import { game } from '../world/game'
-import { interactNearest, toggleSit } from '../world/Player'
+import { interactNearest, toggleSit, MIN_ZOOM } from '../world/Player'
 import { goToSlot, goToDestination, stroll, loopWalk, stopWalk, PLACE_BY_ID } from '../world/actions'
 import { DESTINATIONS, SLOTS } from '../world/terrain'
 import { setMusic, setSfx } from '../lib/audio'
@@ -96,6 +96,11 @@ export function Hud() {
       {nearSlot === null && nearBench === null && !nearMarket && nearPlace && PLACE_BY_ID[nearPlace] && (
         <button className="interact" onClick={interactNearest}>{PLACE_BY_ID[nearPlace].icon} {PLACE_BY_ID[nearPlace].label} <kbd>E</kbd></button>
       )}
+      <div className="zoombtns">
+        <button className={game.watchDog ? "on" : ""} onClick={(e) => { game.watchDog = !game.watchDog; if (game.watchDog) game.camDist = Math.min(game.camDist, 3.4); e.currentTarget.classList.toggle("on", game.watchDog) }} aria-label="반려견 보기">🐶</button>
+        <button onClick={() => { game.camDist = Math.max(MIN_ZOOM, game.camDist - 1.6) }} aria-label="확대">＋</button>
+        <button onClick={() => { game.camDist = Math.min(14, game.camDist + 1.6) }} aria-label="축소">－</button>
+      </div>
       <RunHud />
       {nearNeighbor && (
         <button className="interact greet" onClick={greetNearest}>👋 {nearNeighbor.name}님에게 인사하기 <kbd>H</kbd></button>

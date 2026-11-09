@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore, saveMarket } from '../lib/store'
-import { game } from '../world/game'
+import { game, startFeed } from '../world/game'
 import { chime } from '../lib/audio'
 import { MissionBoard } from './Missions'
 
@@ -40,9 +40,11 @@ export function MarketModal() {
   }
   const wear = (id: string) => { set({ dogOutfit: dogOutfit === id ? null : id }); saveMarket(); chime() }
   const feed = (it: Item) => {
+    if (game.dogHidden) { say('🐶 먼저 분향소 사진에서 아이를 불러 주세요. 그다음 간식을 줄 수 있어요.'); return }
     if (!spend()) return
-    set({ tickets: tickets - 1, treats: treats + 1 }); saveMarket(); game.treatUntil = game.time + 3; chime()
-    say(`${it.icon} ${it.name}을(를) 줬어요. 냠냠 💕`); close()
+    set({ tickets: tickets - 1, treats: treats + 1 }); saveMarket(); chime()
+    startFeed(it.icon)
+    say(`${it.icon} ${it.name}을(를) 손에 들고 불러요…`); close()
   }
   const toggleGood = (id: string) => { set({ goods: goods.includes(id) ? goods.filter((g) => g !== id) : [...goods, id] }); saveMarket(); chime() }
   const list = tab === 'clothes' ? CLOTHES : tab === 'snacks' ? SNACKS : tab === 'goods' ? GOODS : []

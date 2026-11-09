@@ -280,3 +280,8 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
   .toast { top: 112px; }
 }
 .flat-title { margin: 0 0 4px; font-size: 1.7rem; color: #3b3128; }
+
+/* zoom buttons (pinching with two fingers works too) */
+.zoombtns { position: absolute; right: max(14px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; }
+.zoombtns button { width: 44px; height: 44px; border-radius: 50%; border: none; background: #ffffffd9; box-shadow: 0 2px 8px #0003; font-size: 1.3rem; line-height: 1; }
+.zoombtns button.on { background: #ffd2e4; }

@@ -255,7 +255,7 @@ export function Avatar() {
     // blink
     const blink = (t % 3.8) < 0.12 ? 0.1 : 1
     eyeL.current.scale.y = eyeR.current.scale.y = blink
-    bouquet.current.visible = offer
+    bouquet.current.visible = offer && game.feed.t < 0
   })
 
   return <AvatarBody look={look} goods={goods} refs={refs} />
@@ -298,6 +298,7 @@ export function Dog() {
       s.sumN = game.summon.n; s.x = game.summon.x; s.z = game.summon.z; s.emerge = 0; s.pending = true; s.y = groundHeight(s.x, s.z)
       s.hd = Math.atan2(p.x - s.x, p.z - s.z)
     }
+    game.dogHidden = hiddenRef.current
     if (hiddenRef.current) { root.current.visible = false; game.dog.x = p.x; game.dog.y = p.y; game.dog.z = p.z; return }
     root.current.visible = true
     if (s.emerge < 1) s.emerge = Math.min(1, s.emerge + dt / 2.4)
@@ -319,6 +320,9 @@ export function Dog() {
       tx = p.x + (ax / al) * 1.0; tz = p.z + (az / al) * 1.0
       if (al < 1.5) { ball.s = 'none'; game.treatUntil = game.time + 2.2; useStore.getState().say('🎾 잘했어요! 공을 물어 왔어요 💕') }
     }
+    // snack: trot round to the front of the visitor, sit and eat
+    const feeding = game.feed.t >= 0 && !chase
+    if (feeding) { tx = p.x + Math.sin(game.heading) * 0.8 - Math.cos(game.heading) * 0.75; tz = p.z + Math.cos(game.heading) * 0.8 + Math.sin(game.heading) * 0.75 } // front-right, where the camera sees it
     // bench: hop up beside the visitor
     const bn = game.bench
     if (bn.on && !chase) { const q = benchSeat(bn, 0.38); tx = q.x; tz = q.z }
@@ -345,11 +349,14 @@ export function Dog() {
       s.x = nx; s.z = nz
       if (!canStand(s.x, s.z)) { s.x = p.x; s.z = p.z }
     } else {
-      s.hd += Math.atan2(Math.sin(game.heading - s.hd), Math.cos(game.heading - s.hd)) * dt * 2
+      const wantH = feeding ? Math.atan2(p.x - s.x, p.z - s.z) : game.heading // while eating: look at the visitor
+      s.hd += Math.atan2(Math.sin(wantH - s.hd), Math.cos(wantH - s.hd)) * dt * (feeding ? 6 : 2)
     }
     const treat = game.time < game.treatUntil
     s.still = moving ? 0 : s.still + dt
     if (onBench && !moving) s.still = Math.max(s.still, 2)
+    const eating = feeding && !moving && game.feed.t > 1.1 && game.feed.t < 3.5
+    if (feeding && !moving && d < 0.4) s.still = Math.max(s.still, 2) // sits at once when it has arrived
     if (treat) s.still = Math.max(s.still, 2)
     s.sit = damp(s.sit, s.still > 1.6 ? 1 : 0, Math.min(1, dt * 5))
     s.y = lerp(s.y, onBench && d < 0.7 ? bn.y + BENCH_SEAT_Y : groundHeight(s.x, s.z), Math.min(1, dt * 12))
@@ -369,12 +376,12 @@ export function Dog() {
     rig.current.rotation.x = -0.38 * sit + (moving ? Math.sin(s.ph * 2) * 0.03 : 0)
     rig.current.position.y = 0.3 - 0.09 * sit
     tail.current.rotation.z = Math.sin(t * (treat ? 22 : moving ? 15 : 9)) * (0.55 + sit * 0.2)
-    head.current.rotation.x = Math.sin(t * 2) * 0.03 + sit * 0.5 + (moving ? 0.05 : 0) + (treat ? Math.sin(t * 14) * 0.06 : 0)
+    head.current.rotation.x = Math.sin(t * 2) * 0.03 + sit * 0.5 + (eating ? 0.25 + Math.abs(Math.sin(t * 9)) * 0.35 : 0) + (moving ? 0.05 : 0) + (treat ? Math.sin(t * 14) * 0.06 : 0)
     head.current.rotation.y = moving ? 0 : Math.sin(t * 0.7) * 0.25 * sit
     const flop = moving ? Math.sin(s.ph) * 0.25 : Math.sin(t * 1.5) * 0.03
     earL.current.rotation.x = flop; earR.current.rotation.x = flop
     earL.current.rotation.z = earBase.current + flop * 0.4; earR.current.rotation.z = -earBase.current - flop * 0.4
-    tongue.current.visible = moving || sit > 0.5
+    tongue.current.visible = moving || sit > 0.5 || eating
     tongue.current.scale.y = 1 + (moving ? Math.sin(s.ph * 2) * 0.25 : Math.sin(t * 5) * 0.12)
   })
 

@@ -8,6 +8,8 @@ import { footstep } from '../lib/audio'
 import { trees } from './layout'
 import { useStore } from '../lib/store'
 
+export const MIN_ZOOM = 1.8 // closest the camera may come (to see the dog up close)
+let watchSet = false
 const cam = { init: false, tx: 0, ty: 0, tz: 0, dist: 7.5, dragAt: -99 }
 const tmp = new THREE.Vector3()
 const look = new THREE.Vector3()
@@ -26,12 +28,29 @@ export function useInputListeners() {
     const up = (e: KeyboardEvent) => game.keys.delete(e.key.toLowerCase())
     const blur = () => game.keys.clear()
     let drag: { id: number; x: number; y: number } | null = null
+    // pinch: two fingers on the scene zoom the camera in and out
+    const fingers = new Map<number, { x: number; y: number }>()
+    let pinch = 0
+    const gap = () => { const [a, b] = [...fingers.values()]; return Math.hypot(a.x - b.x, a.y - b.y) }
     const pd = (e: PointerEvent) => {
       if (!(e.target instanceof HTMLCanvasElement)) return
-      if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.3) return
+      if (e.pointerType === 'touch') {
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (fingers.size === 2) { pinch = gap(); drag = null; return }
+        if (e.clientX < innerWidth * 0.3) return
+      }
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY }
     }
     const pm = (e: PointerEvent) => {
+      if (fingers.has(e.pointerId)) {
+        fingers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (fingers.size === 2 && pinch > 0) {
+          const g = gap()
+          game.camDist = clamp(game.camDist * (pinch / Math.max(20, g)), MIN_ZOOM, 14)
+          pinch = g
+          return
+        }
+      }
       if (!drag || e.pointerId !== drag.id) return
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y
       drag.x = e.clientX; drag.y = e.clientY
@@ -39,10 +58,10 @@ export function useInputListeners() {
       game.camYaw -= dx * 0.0055
       game.camPitch = clamp(game.camPitch + dy * 0.0045, -0.1, 1.2)
     }
-    const pu = (e: PointerEvent) => { if (drag && e.pointerId === drag.id) drag = null }
+    const pu = (e: PointerEvent) => { fingers.delete(e.pointerId); if (fingers.size < 2) pinch = 0; if (drag && e.pointerId === drag.id) drag = null }
     const wheel = (e: WheelEvent) => {
       if (!(e.target instanceof HTMLCanvasElement)) return
-      game.camDist = clamp(game.camDist + e.deltaY * 0.006, 3.5, 14)
+      game.camDist = clamp(game.camDist + e.deltaY * 0.006, MIN_ZOOM, 14)
     }
     addEventListener('keydown', down); addEventListener('keyup', up); addEventListener('blur', blur)
     addEventListener('pointerdown', pd); addEventListener('pointermove', pm); addEventListener('pointerup', pu); addEventListener('pointercancel', pu)
@@ -210,6 +229,12 @@ export function PlayerController() {
       camera.lookAt(look)
       return
     }
+    // dog close-up: the camera looks at the dog instead of the visitor
+    if (game.watchDog && !game.stargaze) {
+      if (!watchSet) game.camFocus = { x: 0, y: 0, z: 0 }
+      game.camFocus!.x = game.dog.x; game.camFocus!.y = game.dog.y - 0.1; game.camFocus!.z = game.dog.z
+      watchSet = true
+    } else if (watchSet) { game.camFocus = null; watchSet = false }
     const f = game.camFocus
     const fx0 = f ? f.x : p.x, fy0 = f ? f.y + 0.45 : p.y + 1.55, fz0 = f ? f.z : p.z
     // film-style chase camera: a smoothed target, a smoothed distance and a gentle swing round to the back of a walking player
