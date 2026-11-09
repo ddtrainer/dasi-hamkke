@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { game, cancelAutoWalk } from './game'
-import { groundHeight, moveWithCollision, canStand, COLLIDERS, SLOTS, clamp, MARKET, PLACES } from './terrain'
+import { groundHeight, moveWithCollision, canStand, COLLIDERS, SLOTS, clamp, MARKET, PLACES, DESTINATIONS, type V2 } from './terrain'
 import { placeAction } from './actions'
 import { footstep } from '../lib/audio'
 import { trees } from './layout'
@@ -10,9 +10,18 @@ import { useStore } from '../lib/store'
 
 export const MIN_ZOOM = 1.8 // closest the camera may come (to see the dog up close)
 // 전체 보기 camera: looks at the middle of the island from above (island spans about x -70..55, z -57..14)
-const OVERVIEW_C = { x: -7, y: 0, z: -22 }
-const OVERVIEW_DIST = 280 // phone screens are narrow: at 150 only about half the island fits across
-const OVERVIEW_EL = 0.95 // radians above the horizon (~54°)
+// 전체 보기 tour: a bird's-eye camera glides over the island, passing each landmark in turn and naming it
+const TOUR_KEYS = ['gate', 'cafe', 'market', 'pond', 'center', 'dogpark', 'wish', 'bigtree', 'stars', 'gazebo', 'lighthouse'] as const
+const TOUR_PTS: V2[] = TOUR_KEYS.map((k) => DESTINATIONS[k].p)
+const TOUR_STOP = 4.5 // seconds spent gliding from one landmark to the next
+const TOUR_LEG = TOUR_PTS.length * TOUR_STOP // one lap of the island, ending back at the gate
+const TOUR_CENTER = { x: -7, z: -22 } // middle of the island, where the camera climbs to
+const FLY_D = 80, CLIMB_D = 280 // the bird flies low (close enough to read the names); it climbs far up to see the whole island
+const FLY_EL = 0.42, CLIMB_EL = 0.95 // flying: a bird's slanted view; climbed: looking down
+const CLIMB_SEC = 4, HOLD_SEC = 3 // climb, hold the whole-island view, then dive back to the gate
+const TOUR_CYCLE = TOUR_LEG + CLIMB_SEC + HOLD_SEC + CLIMB_SEC
+const smooth01 = (x: number) => { const c = clamp(x, 0, 1); return c * c * (3 - 2 * c) }
+let ovStop = -1 // landmark index last announced (-1 = tour not started)
 let watchSet = false
 const cam = { init: false, tx: 0, ty: 0, tz: 0, dist: 7.5, dragAt: -99 }
 const tmp = new THREE.Vector3()
@@ -224,12 +233,31 @@ export function PlayerController() {
     if (np !== st.nearPlace) st.set({ nearPlace: np })
 
     // ---------- third-person follow camera with collision ----------
+    if (!game.overview) ovStop = -1 // the next tour starts from the first landmark
     if (game.overview) {
       // 전체 보기: a high camera looks down on the whole island from the north-east; the visitor keeps standing where they are
-      const el = OVERVIEW_EL, c = Math.cos(el)
-      tmp.set(OVERVIEW_C.x + Math.sin(game.camYaw) * c * OVERVIEW_DIST, OVERVIEW_C.y + Math.sin(el) * OVERVIEW_DIST, OVERVIEW_C.z + Math.cos(game.camYaw) * c * OVERVIEW_DIST)
+      // the bird flies a low lap past the landmarks, then climbs to see the whole island, holds, and dives back to the gate
+      const T = (game.overviewT += dt)
+      const tl = T % TOUR_CYCLE
+      const ft = Math.min(tl, TOUR_LEG) // during the climb and the dive the flight point stays at the gate
+      let h = 0 // 0 = flying low, 1 = high above the island
+      if (tl >= TOUR_LEG) {
+        const k = tl - TOUR_LEG
+        h = k < CLIMB_SEC ? smooth01(k / CLIMB_SEC) : k < CLIMB_SEC + HOLD_SEC ? 1 : smooth01(1 - (k - CLIMB_SEC - HOLD_SEC) / CLIMB_SEC)
+      }
+      const span = ft / TOUR_STOP, i = Math.floor(span) % TOUR_PTS.length, f = span - Math.floor(span)
+      const a = TOUR_PTS[i], b = TOUR_PTS[(i + 1) % TOUR_PTS.length]
+      const e = f * f * (3 - 2 * f) // ease in and out at each landmark
+      const fx = a[0] + (b[0] - a[0]) * e, fz = a[1] + (b[1] - a[1]) * e
+      const tx = fx + (TOUR_CENTER.x - fx) * h, tz = fz + (TOUR_CENTER.z - fz) * h
+      if (i !== ovStop) { ovStop = i; st.say(DESTINATIONS[TOUR_KEYS[i]].label) }
+      game.camYaw += dt * 0.04 // a slow turn round the island; dragging still turns it too
+      const el = FLY_EL + (CLIMB_EL - FLY_EL) * h + 0.03 * Math.sin(T * 0.7)
+      const D = FLY_D + (CLIMB_D - FLY_D) * h
+      const c = Math.cos(el)
+      tmp.set(tx + Math.sin(game.camYaw) * c * D, Math.sin(el) * D, tz + Math.cos(game.camYaw) * c * D)
       camera.position.lerp(tmp, 1 - Math.exp(-dt * 3))
-      look.set(OVERVIEW_C.x, OVERVIEW_C.y, OVERVIEW_C.z)
+      look.set(tx, 0, tz)
       camera.lookAt(look)
       cam.init = false // when the overview ends, the chase camera starts again from the visitor
       return

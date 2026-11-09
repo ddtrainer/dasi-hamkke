@@ -101,7 +101,7 @@ export function Hud() {
       )}
       <div className="zoombtns">
         <button className={game.watchDog ? "on" : ""} onClick={(e) => { game.watchDog = !game.watchDog; if (game.watchDog) { game.camDist = Math.min(game.camDist, 3.4); game.overview = false }; e.currentTarget.classList.toggle("on", game.watchDog) }} aria-label="반려견 보기">🐶</button>
-        <button className={ov ? "on" : ""} onClick={() => { game.overview = !game.overview; if (game.overview) game.watchDog = false; setOv(game.overview) }} aria-label={ov ? '내 위치로 돌아가기' : '섬 전체 보기'}>{ov ? '👣' : '🔭'}</button>
+        <button className={ov ? "on" : ""} onClick={() => { game.overview = !game.overview; game.overviewT = 0; if (game.overview) game.watchDog = false; setOv(game.overview) }} aria-label={ov ? '내 위치로 돌아가기' : '섬 전체 보기'}>{ov ? '👣' : '🔭'}</button>
         <button onClick={() => { game.overview = false; game.camDist = Math.max(MIN_ZOOM, game.camDist - 1.6) }} aria-label="확대">＋</button>
         <button onClick={() => { game.overview = false; game.camDist = Math.min(14, game.camDist + 1.6) }} aria-label="축소">－</button>
       </div>

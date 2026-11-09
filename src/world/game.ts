@@ -18,7 +18,8 @@ export const game = {
   wantSit: false,
   bench: { on: false, x: 0, y: 0, z: 0, ry: 0 }, // sitting on a bench (centre of the bench, facing ry); the dog hops up beside the visitor
   stargaze: false, // lying on the stargazing hill: the camera looks up at the sky
-  overview: false, // 전체 보기: a high camera over the whole island (the visitor stays where they are)
+  overview: false, // 전체 보기: a bird's-eye tour over the whole island (the visitor stays where they are)
+  overviewT: 0, // seconds since the tour started
   offerUntil: 0,
   treatUntil: 0,
   feed: { t: -1, icon: '🦴' }, // giving a snack: t = seconds since the snack was held out (-1 = not feeding)
