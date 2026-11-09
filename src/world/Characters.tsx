@@ -81,8 +81,12 @@ export function AvatarBody({ look, goods, refs }: { look: AvatarLook; goods: str
         </>)}
         </>)}
         <group ref={pack} position={[0, 1.0, -0.2]}>
-          <mesh scale={[0.6, 0.72, 0.45]} castShadow><sphereGeometry args={[0.2, 16, 14]} /><M c={PACK} r={0.9} /></mesh>
-          <mesh position={[0, 0.0, 0.1]} scale={[0.8, 0.5, 0.3]}><sphereGeometry args={[0.2, 12, 10]} /><M c="#8f5f38" /></mesh>
+          {/* rucksack: a rounded body flat against the back, spanning the shoulders to the waist */}
+          <mesh position={[0, 0.07, 0]} scale={[0.8, 0.98, 0.52]} castShadow><sphereGeometry args={[0.2, 20, 16]} /><M c={PACK} r={0.9} /></mesh>
+          {/* top lid, a little wider than the body, with a strap across it */}
+          <mesh position={[0, 0.27, -0.02]} scale={[0.84, 0.32, 0.6]} castShadow><sphereGeometry args={[0.2, 20, 12]} /><M c="#8f5f38" r={0.9} /></mesh>
+          {/* a strap wrapping round the body */}
+          <mesh position={[0, 0.02, 0]} scale={[1.0, 0.09, 0.6]}><cylinderGeometry args={[0.2, 0.2, 1, 24, 1, true]} /><M c="#6b4226" /></mesh>
           {goods.includes('balloon') && (
             <group position={[0.12, 0.1, -0.1]}>
               <mesh position={[0, 0.6, 0]}><cylinderGeometry args={[0.006, 0.006, 1.2, 4]} /><meshBasicMaterial color="#fff" /></mesh>
@@ -262,6 +266,10 @@ export function Avatar() {
 }
 
 /** Chihuahua companion: follows the player, sits when they stop, ears and tail animate. */
+/** Where the dog walks beside its owner: SIDE_OFF to the right, SIDE_BACK behind (a small step back so it runs alongside). */
+export const SIDE_OFF = 0.55
+export const SIDE_BACK = 0.1
+
 export function Dog() {
   const outfit = useStore((s) => s.dogOutfit)
   const defPet = useStore((s) => s.pet)
@@ -305,9 +313,9 @@ export function Dog() {
     const e = s.emerge, grow = e >= 1 ? 1 : 1 - Math.pow(1 - e, 3)
     root.current.scale.setScalar(0.58 * petSize.current * grow)
     const hold = s.emerge < 0.6
-    // stays close: just behind and a little to the side of the player
-    let tx = p.x - Math.sin(game.heading) * 0.75 + Math.cos(game.heading) * 0.42
-    let tz = p.z - Math.cos(game.heading) * 0.75 - Math.sin(game.heading) * 0.42
+    // stays close: walks side by side with the player, just a half step behind and to the right
+    let tx = p.x - Math.sin(game.heading) * SIDE_BACK + Math.cos(game.heading) * SIDE_OFF
+    let tz = p.z - Math.cos(game.heading) * SIDE_BACK - Math.sin(game.heading) * SIDE_OFF
     // fetch: run to the ball, pick it up, bring it back to the player
     const ball = game.ball
     let chase = false
@@ -330,7 +338,7 @@ export function Dog() {
     let d = Math.hypot(dx, dz)
     if (hold) { dx = dz = d = 0 }
     if (s.pending && !hold && Math.hypot(s.x - p.x, s.z - p.z) < 1.5) { s.pending = false; game.treatUntil = game.time + 2.4 }
-    if (!chase && d > 6) { s.x = p.x - Math.sin(game.heading) * 1.0; s.z = p.z - Math.cos(game.heading) * 1.0; dx = dz = d = 0 }
+    if (!chase && d > 6) { s.x = p.x - Math.sin(game.heading) * SIDE_BACK + Math.cos(game.heading) * SIDE_OFF; s.z = p.z - Math.cos(game.heading) * SIDE_BACK - Math.sin(game.heading) * SIDE_OFF; dx = dz = d = 0 }
     let moving = false
     const onBench = bn.on && !chase && !hold && d < 1.4
     if (onBench) {

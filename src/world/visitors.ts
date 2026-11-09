@@ -72,8 +72,8 @@ export function stepNeighbors(dt: number) {
     }
     n.moving = moving
     n.y += (groundHeight(n.x, n.z) - n.y) * Math.min(1, dt * 12)
-    // dog: trails just behind and beside its owner
-    const tx = n.x - Math.sin(n.hd) * 0.9 + Math.cos(n.hd) * 0.45, tz = n.z - Math.cos(n.hd) * 0.9 - Math.sin(n.hd) * 0.45
+    // dog: walks side by side with its owner (same offsets as the player's own dog)
+    const tx = n.x - Math.sin(n.hd) * 0.1 + Math.cos(n.hd) * 0.55, tz = n.z - Math.cos(n.hd) * 0.1 - Math.sin(n.hd) * 0.55
     const ddx = tx - n.dx, ddz = tz - n.dz, dd = Math.hypot(ddx, ddz)
     n.dMoving = dd > 0.25
     if (n.dMoving) {
