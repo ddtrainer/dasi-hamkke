@@ -61,6 +61,9 @@ export function toggleSit() {
 }
 import { greetNearest } from './visitors'
 import { lap, lapMove } from './lapRun'
+import { benchSeat, BENCH_SEAT_Y } from './game'
+import { benches } from './layout'
+import { standFromBench, sitOnBench } from './actions'
 export function interactNearest() {
   const st = useStore.getState()
   // a stale openId (memorial no longer visible) must never swallow the button — clear it
@@ -68,6 +71,8 @@ export function interactNearest() {
   else if (st.openId) return
   if (st.registerSlot !== undefined) return
   if (st.nearSlot === null) {
+    if (st.onBench) { standFromBench(); return }
+    if (st.nearBench !== null) { sitOnBench(st.nearBench); return }
     if (st.nearMarket && !st.marketOpen) st.set({ marketOpen: true })
     else if (!st.nearMarket && st.nearPlace) placeAction(st.nearPlace)
     else if (!st.nearMarket) st.say('가까이 가면 이 버튼(E)으로 분향소·마켓·별 보기 같은 곳을 열 수 있어요. 🌸')
@@ -119,6 +124,7 @@ export function PlayerController() {
     const mag = Math.hypot(ix, iz)
     const lapOn = lap.on
     const manual = mag > 0.12 && !lapOn // a lap run is driven by the runner's footfalls, not by the stick
+    if (game.bench.on && (manual || game.route.length || lapOn)) standFromBench()
     if (manual) { cancelAutoWalk(); game.wantSit = false }
     if (!game.wantSit) game.stargaze = false
     const run = k.has('shift') || game.runToggle || mag > 1.15 || (game.joy.x ** 2 + game.joy.y ** 2) > 0.85
@@ -147,6 +153,12 @@ export function PlayerController() {
       game.anim = moved ? 'run' : 'idle'
     } else if (offering) {
       game.anim = 'offer'
+    } else if (game.bench.on) {
+      // sitting on a bench: slide onto the left half of the seat and face the way the bench faces
+      const bn = game.bench, q = benchSeat(bn, -0.3), kk = Math.min(1, dt * 5)
+      p.x += (q.x - p.x) * kk; p.z += (q.z - p.z) * kk
+      game.heading += Math.atan2(Math.sin(bn.ry - game.heading), Math.cos(bn.ry - game.heading)) * Math.min(1, dt * 8)
+      game.anim = 'sit'
     } else if (speedMul > 0) {
       const spd = (run && manual ? 6.4 : manual ? 3.4 : 3.8) * speedMul
       const [nx, nz] = moveWithCollision(p.x, p.z, dirx * spd * dt, dirz * spd * dt)
@@ -162,13 +174,18 @@ export function PlayerController() {
       game.anim = game.wantSit ? 'sit' : 'idle'
     }
     if (!canStand(p.x, p.z)) { /* safety: never leave walkable area */ p.x = 0; p.z = 100 }
-    const gy = groundHeight(p.x, p.z)
+    const gy = game.bench.on ? game.bench.y + BENCH_SEAT_Y : groundHeight(p.x, p.z)
     p.y += (gy - p.y) * Math.min(1, dt * 14)
 
     if (moved) {
       stepPhase += dt * (game.anim === 'run' ? 3.3 : 2.1)
       if (stepPhase >= 1) { stepPhase = 0; footstep(game.anim === 'run') }
     }
+
+    // ---------- nearest bench ----------
+    let nb: number | null = null, nbd = 2.6
+    benches.forEach((b, i) => { const d = Math.hypot(p.x - b.x, p.z - b.z); if (d < nbd) { nbd = d; nb = i } })
+    if (nb !== st.nearBench) st.set({ nearBench: nb })
 
     // ---------- nearest shrine ----------
     let near: number | null = null, best = 4.2

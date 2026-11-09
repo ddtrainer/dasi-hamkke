@@ -6,6 +6,7 @@ import { ShrineModal, RegisterModal, Portrait } from './Modals'
 import { MarketModal } from './MarketModal'
 import { PetModal } from './PetModal'
 import { AvatarModal } from './AvatarModal'
+import { WishModal } from './WishModal'
 import { stopLapRun } from '../world/lapRun'
 import { api } from '../lib/api'
 import { game } from '../world/game'
@@ -118,6 +119,7 @@ function Flat() {
   const gl = hasWebGL()
   return (
     <div className="flat">
+      <h2 className="flat-title">2D 추모 화면</h2>
       <header>
         <h1>🐾 댕<span className="nyang">냥</span> 메모리</h1>
         <div className="row">
@@ -178,6 +180,7 @@ export default function App() {
       <MarketModal />
       <PetModal />
       <AvatarModal />
+      <WishModal />
       {screen !== 'world' && <Toast />}
     </>
   )

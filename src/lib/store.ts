@@ -29,6 +29,12 @@ export function saveMarket() {
   try { localStorage.setItem('dasi.market', JSON.stringify({ dogOutfit, goods, treats, tickets, owned, missions, ribbons })) } catch { /* ignore */ }
 }
 
+export interface Wish { t: string; c: number } // wish text + ribbon colour index
+function loadWishes(): Wish[] {
+  try { const r = JSON.parse(localStorage.getItem('dasi.wishes') ?? '[]'); return Array.isArray(r) ? r.filter((w) => w && typeof w.t === 'string').map((w) => ({ t: String(w.t).slice(0, 80), c: Number(w.c) || 0 })).slice(0, 60) : [] } catch { return [] }
+}
+export function saveWishes(w: Wish[]) { try { localStorage.setItem('dasi.wishes', JSON.stringify(w)) } catch { /* ignore */ } }
+
 function loadRested(): string[] {
   try { const r = JSON.parse(localStorage.getItem('dasi.rested') ?? '[]'); return Array.isArray(r) ? r.filter((x) => typeof x === 'string') : [] } catch { return [] }
 }
@@ -58,6 +64,11 @@ interface S {
   missions: Record<string, string> // mission id -> KST day it was last completed
   ribbons: number // wish ribbons hung in the memory forest
   nearPlace: string | null
+  wishes: Wish[] // the visitor's written wishes; wishes[i] belongs to the i-th hanging ribbon (older ribbons have none)
+  nearBench: number | null // index of a bench within reach
+  onBench: boolean // the visitor is sitting on a bench
+  wishOpen: boolean // wish writing dialog
+  wishNew: number // index of the ribbon just hung (it glows for a while), -1 = none
   pet: PetProfile // the default companion dog's look (for visitors without a shrine dog)
   pets: Record<string, PetProfile> // each memorial's dog, by memorial id
   companionId: string | null // memorial whose dog is walking with the visitor
@@ -82,7 +93,7 @@ interface S {
 let toastT: number | undefined
 export const useStore = create<S>((set, get) => ({
   screen: resumed?.screen === 'world' ? 'world' : 'landing', phase: resumed?.screen === 'world' ? 'play' : 'intro', splash: false, quality: IS_MOBILE ? 'low' : 'high', tod: 'day', sfx: true, music: false,
-  userId: '', memorials: [], flowerCounts: {}, candleCounts: {}, openId: null, registerSlot: resumed?.screen === 'world' && resumed.reg ? resumed.regSlot : undefined, nearSlot: null, nearMarket: false, nearPlace: null, pet: loadPet(), pets: loadPets(), companionId: loadCompanion(), petOpen: false, lapUi: { status: 'idle', mode: 'sensor', steps: 0, sec: 0 }, nearNeighbor: null, greetNote: null, avatar: loadAvatar(), avatarFor: null, petTarget: null, rested: loadRested(), marketOpen: false, ...loadMarket(), menuOpen: false, toast: null,
+  userId: '', memorials: [], flowerCounts: {}, candleCounts: {}, openId: null, registerSlot: resumed?.screen === 'world' && resumed.reg ? resumed.regSlot : undefined, nearSlot: null, nearMarket: false, nearPlace: null, wishes: loadWishes(), nearBench: null, onBench: false, wishOpen: false, wishNew: -1, pet: loadPet(), pets: loadPets(), companionId: loadCompanion(), petOpen: false, lapUi: { status: 'idle', mode: 'sensor', steps: 0, sec: 0 }, nearNeighbor: null, greetNote: null, avatar: loadAvatar(), avatarFor: null, petTarget: null, rested: loadRested(), marketOpen: false, ...loadMarket(), menuOpen: false, toast: null,
   set: (p) => set(p),
   setPetFor: (id, p) => { const pets = { ...get().pets, [id]: p }; savePets(pets); set({ pets }) },
   markRested: (id) => { const rested = [...new Set([...get().rested, id])]; try { localStorage.setItem('dasi.rested', JSON.stringify(rested)) } catch { /* ignore */ } set({ rested }) },

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore, IS_MOBILE } from '../lib/store'
 import { game } from '../world/game'
 import { interactNearest, toggleSit } from '../world/Player'
@@ -37,29 +37,36 @@ function Joystick() {
 }
 
 export function Hud() {
-  const { nearNeighbor, greetNote, phase, nearSlot, nearMarket, nearPlace, memorials, userId, sfx, music, quality, menuOpen, tod, set, toast } = useStore()
+  const { nearBench, onBench, nearNeighbor, greetNote, phase, nearSlot, nearMarket, nearPlace, memorials, userId, sfx, music, quality, menuOpen, tod, set, toast } = useStore()
   const near = nearSlot !== null ? memorials.find((m) => m.slot === nearSlot) : undefined
   const mine = memorials.filter((m) => m.ownerId === userId)
   useEffect(() => { setSfx(sfx) }, [sfx])
   useEffect(() => { setMusic(music) }, [music])
-  const runRef = useRef<HTMLButtonElement>(null)
+  const [more, setMore] = useState(false)
   if (phase === 'intro') {
     return <button className="skip" onClick={() => { game.introT = 99 }}>건너뛰기 ›</button>
   }
   return (
     <>
       <div className="topbar">
-        <button className="chip" onClick={() => set({ menuOpen: !menuOpen })}>🧭 이동</button>
-        <button className="chip" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
-        <button className="chip" onClick={() => set({ petOpen: true, petTarget: useStore.getState().companionId })}>🐶 내 아이</button>
-        <button className="chip" onClick={() => set({ avatarFor: 'change' })}>🧑 캐릭터</button>
+        <button className="chip" onClick={() => { setMore(false); set({ menuOpen: !menuOpen }) }}>🧭 이동</button>
         <span className="sp" />
-        <button className="chip" onClick={() => set({ tod: tod === 'day' ? 'sunset' : tod === 'sunset' ? 'night' : 'day' })} aria-label="시간대">{tod === 'day' ? '☀️ 낮' : tod === 'sunset' ? '🌇 노을' : '🌙 밤'}</button>
-        <button className={'chip' + (sfx ? ' on' : '')} onClick={() => set({ sfx: !sfx })} aria-label="효과음">{sfx ? '🔊' : '🔇'}</button>
-        <button className={'chip' + (music ? ' on' : '')} onClick={() => set({ music: !music })} aria-label="배경음악">🎵</button>
-        <button className="chip" onClick={() => set({ quality: quality === 'high' ? 'low' : 'high' })}>{quality === 'high' ? '고화질' : '절약'}</button>
-        <button className="chip" onClick={() => set({ screen: 'flat' })}>2D</button>
+        <button className="chip" onClick={() => { set({ menuOpen: false }); setMore(!more) }} aria-label="더보기">⋯ 더보기</button>
       </div>
+      {more && (
+        <div className="menu more" onClick={() => setMore(false)}>
+          <button onClick={() => set({ petOpen: true, petTarget: useStore.getState().companionId })}>🐶 내 아이 꾸미기</button>
+          <button onClick={() => set({ avatarFor: 'change' })}>🧑 캐릭터 바꾸기</button>
+          <button onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
+          <button onClick={toggleSit}>🪑 앉기 / 일어나기</button>
+          <h4>화면과 소리</h4>
+          <button onClick={(e) => { e.stopPropagation(); set({ tod: tod === 'day' ? 'sunset' : tod === 'sunset' ? 'night' : 'day' }) }}>{tod === 'day' ? '☀️ 낮' : tod === 'sunset' ? '🌇 노을' : '🌙 밤'} (누르면 바뀌어요)</button>
+          <button onClick={(e) => { e.stopPropagation(); set({ sfx: !sfx }) }}>{sfx ? '🔊 효과음 켜짐' : '🔇 효과음 꺼짐'}</button>
+          <button onClick={(e) => { e.stopPropagation(); set({ music: !music }) }}>{music ? '🎵 배경음악 켜짐' : '🎵 배경음악 꺼짐'}</button>
+          <button onClick={(e) => { e.stopPropagation(); set({ quality: quality === 'high' ? 'low' : 'high' }) }}>{quality === 'high' ? '✨ 고화질' : '🔋 절약 모드'} (누르면 바뀌어요)</button>
+          <button onClick={() => set({ screen: 'flat' })}>🗺️ 2D 화면으로 보기</button>
+        </div>
+      )}
       {menuOpen && (
         <div className="menu" onClick={() => set({ menuOpen: false })}>
           <h4>자동 이동</h4>
@@ -80,10 +87,13 @@ export function Hud() {
           {near ? `🕯️ ${near.petName}의 분향소 열기` : '🌱 분향소 자리 — 만들기'} <kbd>E</kbd>
         </button>
       )}
-      {nearSlot === null && nearMarket && (
+      {nearSlot === null && nearBench !== null && (
+        <button className="interact" onClick={interactNearest}>{onBench ? '🧍 일어나기' : '🪑 벤치에 앉기'} <kbd>E</kbd></button>
+      )}
+      {nearSlot === null && nearBench === null && nearMarket && (
         <button className="interact" onClick={interactNearest}>🛍️ 댕냥 메모리 마켓 열기 <kbd>E</kbd></button>
       )}
-      {nearSlot === null && !nearMarket && nearPlace && PLACE_BY_ID[nearPlace] && (
+      {nearSlot === null && nearBench === null && !nearMarket && nearPlace && PLACE_BY_ID[nearPlace] && (
         <button className="interact" onClick={interactNearest}>{PLACE_BY_ID[nearPlace].icon} {PLACE_BY_ID[nearPlace].label} <kbd>E</kbd></button>
       )}
       <RunHud />
@@ -99,14 +109,7 @@ export function Hud() {
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
       {IS_MOBILE || matchMedia('(pointer: coarse)').matches ? (
-        <>
-          <Joystick />
-          <div className="actions">
-            <button ref={runRef} onClick={(e) => { game.runToggle = !game.runToggle; e.currentTarget.classList.toggle('on', game.runToggle) }}>🏃</button>
-            <button onClick={toggleSit}>🪑</button>
-            <button onClick={interactNearest}>E</button>
-          </div>
-        </>
+        <Joystick />
       ) : (
         <div className="help">WASD/방향키 이동 · Shift 달리기 · 드래그 시점 · 휠 줌 · E 가까운 곳 열기(분향소·마켓·별 보기) · C 앉기 · H 인사</div>
       )}

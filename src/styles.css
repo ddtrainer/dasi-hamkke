@@ -256,3 +256,27 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 .card button.stick { width: calc(100% + 2 * var(--cp)); border-radius: 0; }
 .card .row2.stick { justify-content: flex-end; }
 .card button.btn.primary.stick { background: linear-gradient(#ff9ec4, #f77fae); padding: 14px var(--cp) calc(14px + env(safe-area-inset-bottom)); }
+
+/* wish ribbon dialog */
+.wishm { width: min(440px, 100%); }
+.wishm h2 { margin: 0; font-size: 1.15rem; }
+.wishm textarea { resize: none; }
+.wish-colors { display: flex; align-items: center; gap: 8px; }
+.wish-colors button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #d6c9b6; }
+.wish-colors button.on { box-shadow: 0 0 0 3px #f77fae; }
+.wish-colors .count { margin-left: auto; font-size: .75rem; color: #8a7b68; }
+.mywishes { display: flex; flex-direction: column; gap: 4px; max-height: 28dvh; overflow: auto; }
+.mywishes h4 { margin: 4px 0 2px; font-size: .8rem; color: #6b5b48; }
+.mywishes button { display: flex; align-items: center; gap: 8px; text-align: left; border: 1px solid #eadfcb; background: #fff; border-radius: 10px; padding: 8px 10px; font-size: .85rem; }
+.mywishes button i { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+
+/* simple phone HUD: two buttons on top, one contextual button at the bottom, the stick */
+.menu.more { left: auto; right: 10px; width: 250px; }
+@media (pointer: coarse) {
+  .interact kbd { display: none; }
+  .interact { bottom: calc(max(28px, env(safe-area-inset-bottom)) + 150px); }
+  .interact.greet { bottom: calc(max(28px, env(safe-area-inset-bottom)) + 210px); padding: 10px 16px; font-size: .92rem; }
+  .greetnote { top: 64px; }
+  .toast { top: 112px; }
+}
+.flat-title { margin: 0 0 4px; font-size: 1.7rem; color: #3b3128; }

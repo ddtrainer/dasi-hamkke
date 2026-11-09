@@ -87,6 +87,15 @@ export const wishForest = (() => {
   COLLIDERS.push({ x: c.x, z: c.z, r: 0.9 })
   return { c, spots }
 })()
+/** wish ribbons hang from two ropes (r = 1.9 and 2.5) strung between posts around the memorial stone, in the open where they are easy to see */
+export const WISH_ROPES = [{ r: 1.9, y: 2.05 }, { r: 2.5, y: 2.05 }]
+export function wishSlot(i: number) {
+  const { c } = wishForest
+  const rope = WISH_ROPES[i % 2], n = Math.floor(i / 2)
+  const a = n * (Math.PI * 2 / 30) + (i % 2) * 0.1 + 0.5 // 30 ribbons around each rope
+  const x = c.x + Math.cos(a) * rope.r, z = c.z + Math.sin(a) * rope.r
+  return { x, y: terrainHeight(x, z) + rope.y - 0.5, z, ry: a + Math.PI / 2, cx: c.x, cz: c.z }
+}
 /** café garden: a kiosk and two tables */
 export const cafe = (() => {
   const c = place('cafe')

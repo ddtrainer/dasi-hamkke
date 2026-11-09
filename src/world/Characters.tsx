@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { game } from './game'
+import { game, benchSeat, BENCH_SEAT_Y } from './game'
 import { useStore } from '../lib/store'
 import { groundHeight, canStand, moveWithCollision } from './terrain'
 import { DogBody, EAR_BASE } from './DogModel'
@@ -319,13 +319,24 @@ export function Dog() {
       tx = p.x + (ax / al) * 1.0; tz = p.z + (az / al) * 1.0
       if (al < 1.5) { ball.s = 'none'; game.treatUntil = game.time + 2.2; useStore.getState().say('🎾 잘했어요! 공을 물어 왔어요 💕') }
     }
+    // bench: hop up beside the visitor
+    const bn = game.bench
+    if (bn.on && !chase) { const q = benchSeat(bn, 0.38); tx = q.x; tz = q.z }
     let dx = tx - s.x, dz = tz - s.z
     let d = Math.hypot(dx, dz)
     if (hold) { dx = dz = d = 0 }
     if (s.pending && !hold && Math.hypot(s.x - p.x, s.z - p.z) < 1.5) { s.pending = false; game.treatUntil = game.time + 2.4 }
     if (!chase && d > 6) { s.x = p.x - Math.sin(game.heading) * 1.0; s.z = p.z - Math.cos(game.heading) * 1.0; dx = dz = d = 0 }
     let moving = false
-    if (d > 0.15) {
+    const onBench = bn.on && !chase && !hold && d < 1.4
+    if (onBench) {
+      // too close to walk round the bench (its collision circle would stop the dog): slide up onto the seat
+      const kk = Math.min(1, dt * 4)
+      s.x += dx * kk; s.z += dz * kk
+      moving = d > 0.25
+      const want = moving ? Math.atan2(dx, dz) : bn.ry
+      s.hd += Math.atan2(Math.sin(want - s.hd), Math.cos(want - s.hd)) * Math.min(1, dt * 8)
+    } else if (d > 0.15) {
       const sp = Math.min(chase ? 8 : 9, 1.8 + d * 7) * dt
       const [nx, nz] = moveWithCollision(s.x, s.z, (dx / d) * sp, (dz / d) * sp)
       if (nx !== s.x || nz !== s.z) moving = true
@@ -338,9 +349,10 @@ export function Dog() {
     }
     const treat = game.time < game.treatUntil
     s.still = moving ? 0 : s.still + dt
+    if (onBench && !moving) s.still = Math.max(s.still, 2)
     if (treat) s.still = Math.max(s.still, 2)
     s.sit = damp(s.sit, s.still > 1.6 ? 1 : 0, Math.min(1, dt * 5))
-    s.y = lerp(s.y, groundHeight(s.x, s.z), Math.min(1, dt * 12))
+    s.y = lerp(s.y, onBench && d < 0.7 ? bn.y + BENCH_SEAT_Y : groundHeight(s.x, s.z), Math.min(1, dt * 12))
     s.ph += dt * (moving ? 17 : 0)
     const t = game.time
     root.current.position.set(s.x, s.y + (moving ? Math.abs(Math.sin(s.ph)) * 0.035 : 0) + (treat ? Math.abs(Math.sin(t * 9)) * 0.1 : 0) + (1 - grow) * 0.55, s.z)

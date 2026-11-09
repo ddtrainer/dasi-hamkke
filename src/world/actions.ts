@@ -1,4 +1,6 @@
 import { game, startAutoWalk, cancelAutoWalk } from './game'
+import { benches } from './layout'
+import { lap } from './lapRun'
 import { SLOTS, planRoute, routeThrough, DESTINATIONS, V2, NODES, LOOP_IDS, PLACES, canStand, groundHeight } from './terrain'
 import { useStore, saveMarket } from '../lib/store'
 import { chime } from '../lib/audio'
@@ -58,13 +60,29 @@ export function throwBall() {
   game.offerUntil = game.time + 0.7
 }
 /** The single action offered by each little place (see PLACES). */
+/** Sit down on bench i (the dog hops up beside the visitor); movement or E again stands up. */
+export function sitOnBench(i: number) {
+  const b = benches[i]
+  if (!b || lap.on) return
+  cancelAutoWalk()
+  game.stargaze = false; game.wantSit = true
+  game.bench = { on: true, x: b.x, y: b.y, z: b.z, ry: b.ry }
+  useStore.getState().set({ onBench: true })
+  useStore.getState().say('🪑 벤치에 앉았어요. 반려견도 옆에 앉았어요. 움직이면 일어나요.')
+}
+export function standFromBench() {
+  const b = game.bench
+  if (!b.on) return
+  b.on = false; game.wantSit = false
+  game.pos.x = b.x + Math.sin(b.ry) * 1.15; game.pos.z = b.z + Math.cos(b.ry) * 1.15
+  useStore.getState().set({ onBench: false })
+}
 export function placeAction(id: string) {
   const st = useStore.getState()
   if (id === 'dogpark') return throwBall()
   if (id === 'wish') {
     if (st.ribbons >= 60) { st.say('🎀 숲이 소원 리본으로 가득해요. 모두의 마음이 모였어요.'); return }
-    st.set({ ribbons: st.ribbons + 1 }); saveMarket(); chime()
-    st.say('🎀 소원 리본을 달았어요. 소중한 이름을 마음속으로 불러 보세요.')
+    st.set({ wishOpen: true })
     return
   }
   if (id === 'cafe') {

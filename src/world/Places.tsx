@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { terrainHeight, groundHeight } from './terrain'
-import { dogPark, wishForest, cafe, stargaze } from './layout'
+import { dogPark, wishForest, wishSlot, WISH_ROPES, cafe, stargaze } from './layout'
 import { game, tod } from './game'
 import { useStore } from '../lib/store'
 
@@ -79,38 +79,57 @@ export function DogPark() {
   )
 }
 
-const RIBBON_COLORS = ['#ff9ec4', '#ffe066', '#a9d8ff', '#c9a0ff', '#ffb38a', '#9be3b0']
+export const RIBBON_COLORS = ['#ff9ec4', '#ffe066', '#a9d8ff', '#c9a0ff', '#ffb38a', '#9be3b0']
 export function WishForest() {
-  const { c, spots } = wishForest
-  const ribbons = useStore((s) => s.ribbons)
+  const { c } = wishForest
+  const wishes = useStore((s) => s.wishes)
   const ref = useRef<THREE.InstancedMesh>(null!)
   const lamp = useRef<THREE.MeshStandardMaterial>(null!)
-  const slots = useMemo(() => {
-    // 60 fixed hanging spots around the trees (the n-th wish takes the n-th spot)
-    const out: { x: number; y: number; z: number; ry: number; col: string }[] = []
-    for (let i = 0; i < 60; i++) {
-      const [tx, tz] = spots[i % spots.length]
-      const a = (i * 2.399) % (Math.PI * 2), r = 0.45 + ((i * 7) % 5) * 0.12
-      out.push({ x: tx + Math.cos(a) * r, y: terrainHeight(tx, tz) + 1.9 + ((i * 13) % 7) * 0.18, z: tz + Math.sin(a) * r, ry: a, col: RIBBON_COLORS[i % RIBBON_COLORS.length] })
-    }
-    return out
-  }, [spots])
+  const slots = useMemo(() => Array.from({ length: 60 }, (_, i) => wishSlot(i)), [])
+  const o = useMemo(() => new THREE.Object3D(), [])
+  const col = useMemo(() => new THREE.Color(), [])
   useEffect(() => {
-    const o = new THREE.Object3D(); const col = new THREE.Color()
+    slots.forEach((_, i) => { ref.current.setColorAt(i, col.set(RIBBON_COLORS[(wishes[i]?.c ?? i) % RIBBON_COLORS.length])) })
+    if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true
+  }, [slots, wishes, col])
+  // a ribbon that was just hung drops in with a bounce and pulses for a few seconds; the others sway a little
+  const born = useRef({ i: -1, t: 0 })
+  useFrame(({ clock }, dt) => {
+    lamp.current.emissiveIntensity = 0.8 + 2.4 * Math.max(tod.night, tod.dusk * 0.8)
+    const st = useStore.getState()
+    if (st.wishNew !== born.current.i) born.current = { i: st.wishNew, t: 0 }
+    born.current.t += dt
+    const t = clock.elapsedTime
     slots.forEach((s, i) => {
-      o.position.set(s.x, s.y, s.z); o.rotation.set(0, s.ry, 0); o.scale.setScalar(i < ribbons ? 1 : 0.0001); o.updateMatrix()
-      ref.current.setMatrixAt(i, o.matrix); ref.current.setColorAt(i, col.set(s.col))
+      const hung = i < st.ribbons
+      let sc = hung ? 1 : 0.0001, dy = 0
+      if (hung && i === born.current.i && born.current.t < 5) {
+        const k = Math.min(1, born.current.t / 0.8)
+        sc = (1 + 0.45 * Math.sin(born.current.t * 6)) * k + (1 - k) * 0.1
+        dy = (1 - k) * 0.8
+      }
+      o.position.set(s.x, s.y + dy, s.z); o.rotation.set(0, s.ry, hung ? Math.sin(t * 1.3 + i) * 0.12 : 0); o.scale.setScalar(sc); o.updateMatrix()
+      ref.current.setMatrixAt(i, o.matrix)
     })
     ref.current.instanceMatrix.needsUpdate = true
-    if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true
-  }, [ribbons, slots])
-  useFrame(() => { lamp.current.emissiveIntensity = 0.8 + 2.4 * Math.max(tod.night, tod.dusk * 0.8) })
+  })
   const cy = terrainHeight(c.x, c.z)
+  const read = (e: { stopPropagation: () => void; instanceId?: number }) => {
+    e.stopPropagation()
+    const i = e.instanceId ?? -1, s = useStore.getState()
+    if (i < 0 || i >= s.ribbons) return
+    s.say(s.wishes[i]?.t ? `🎀 “${s.wishes[i].t}”` : '🎀 누군가의 소원 리본이에요.')
+  }
   return (
     <group>
-      <instancedMesh ref={ref} args={[undefined, undefined, 60]} frustumCulled={false}>
-        <boxGeometry args={[0.07, 0.62, 0.015]} /><meshStandardMaterial roughness={0.9} side={THREE.DoubleSide} />
+      <instancedMesh ref={ref} args={[undefined, undefined, 60]} frustumCulled={false} onClick={read}>
+        <boxGeometry args={[0.24, 0.95, 0.02]} /><meshStandardMaterial roughness={0.8} emissive="#ffffff" emissiveIntensity={0.18} side={THREE.DoubleSide} />
       </instancedMesh>
+      {/* ropes strung between posts, the ribbons hang from them */}
+      <group position={[c.x, cy, c.z]}>
+        {WISH_ROPES.map((rp) => (<mesh key={rp.r} position={[0, rp.y, 0]} rotation-x={Math.PI / 2}><torusGeometry args={[rp.r, 0.018, 5, 48]} /><meshStandardMaterial color="#d8c7a0" roughness={1} /></mesh>))}
+        {[0.2, 1.77, 3.34, 4.91].map((a) => (<mesh key={a} position={[Math.cos(a) * 2.2, 1.1, Math.sin(a) * 2.2]}><cylinderGeometry args={[0.05, 0.06, 2.2, 6]} /><meshStandardMaterial color="#8a5e36" /></mesh>))}
+      </group>
       {/* memorial stone */}
       <group position={[c.x, cy, c.z]}>
         <mesh position={[0, 0.12, 0]}><cylinderGeometry args={[0.85, 0.95, 0.24, 10]} /><meshStandardMaterial color="#cfc8ba" flatShading /></mesh>

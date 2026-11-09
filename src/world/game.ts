@@ -16,6 +16,7 @@ export const game = {
   joy: { x: 0, y: 0 },
   runToggle: false,
   wantSit: false,
+  bench: { on: false, x: 0, y: 0, z: 0, ry: 0 }, // sitting on a bench (centre of the bench, facing ry); the dog hops up beside the visitor
   stargaze: false, // lying on the stargazing hill: the camera looks up at the sky
   offerUntil: 0,
   treatUntil: 0,
@@ -34,6 +35,11 @@ export const game = {
   introT: 0,
   time: 0,
 }
+/** a point on a bench seat, lx metres along the bench (+ = to the visitor's left side as seen from the front) */
+export function benchSeat(b: { x: number; z: number; ry: number }, lx: number) {
+  return { x: b.x + lx * Math.cos(b.ry), z: b.z - lx * Math.sin(b.ry) }
+}
+export const BENCH_SEAT_Y = 0.49
 export function cancelAutoWalk() { game.route = []; game.onArrive = null }
 export function startAutoWalk(route: V2[], onArrive?: () => void) {
   game.route = route.slice()
