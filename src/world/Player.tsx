@@ -9,6 +9,10 @@ import { trees } from './layout'
 import { useStore } from '../lib/store'
 
 export const MIN_ZOOM = 1.8 // closest the camera may come (to see the dog up close)
+// 전체 보기 camera: looks at the middle of the island from above (island spans about x -70..55, z -57..14)
+const OVERVIEW_C = { x: -7, y: 0, z: -22 }
+const OVERVIEW_DIST = 280 // phone screens are narrow: at 150 only about half the island fits across
+const OVERVIEW_EL = 0.95 // radians above the horizon (~54°)
 let watchSet = false
 const cam = { init: false, tx: 0, ty: 0, tz: 0, dist: 7.5, dragAt: -99 }
 const tmp = new THREE.Vector3()
@@ -144,7 +148,7 @@ export function PlayerController() {
     const lapOn = lap.on
     const manual = mag > 0.12 && !lapOn // a lap run is driven by the runner's footfalls, not by the stick
     if (game.bench.on && (manual || game.route.length || lapOn)) standFromBench()
-    if (manual) { cancelAutoWalk(); game.wantSit = false }
+    if (manual) { cancelAutoWalk(); game.wantSit = false; game.overview = false }
     if (!game.wantSit) game.stargaze = false
     const run = k.has('shift') || game.runToggle || mag > 1.15 || (game.joy.x ** 2 + game.joy.y ** 2) > 0.85
 
@@ -220,6 +224,16 @@ export function PlayerController() {
     if (np !== st.nearPlace) st.set({ nearPlace: np })
 
     // ---------- third-person follow camera with collision ----------
+    if (game.overview) {
+      // 전체 보기: a high camera looks down on the whole island from the north-east; the visitor keeps standing where they are
+      const el = OVERVIEW_EL, c = Math.cos(el)
+      tmp.set(OVERVIEW_C.x + Math.sin(game.camYaw) * c * OVERVIEW_DIST, OVERVIEW_C.y + Math.sin(el) * OVERVIEW_DIST, OVERVIEW_C.z + Math.cos(game.camYaw) * c * OVERVIEW_DIST)
+      camera.position.lerp(tmp, 1 - Math.exp(-dt * 3))
+      look.set(OVERVIEW_C.x, OVERVIEW_C.y, OVERVIEW_C.z)
+      camera.lookAt(look)
+      cam.init = false // when the overview ends, the chase camera starts again from the visitor
+      return
+    }
     if (game.stargaze) {
       // lying back on the hilltop: the lens sits low behind the player and looks up (drag to look around the sky)
       const el = clamp(game.camPitch + 0.2, 0.25, 1.45)

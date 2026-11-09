@@ -43,6 +43,9 @@ export function Hud() {
   useEffect(() => { setSfx(sfx) }, [sfx])
   useEffect(() => { setMusic(music) }, [music])
   const [more, setMore] = useState(false)
+  // the 전체 보기 button follows the game state (the visitor can leave the overview by walking)
+  const [ov, setOv] = useState(false)
+  useEffect(() => { const id = setInterval(() => setOv(game.overview), 250); return () => clearInterval(id) }, [])
   if (phase === 'intro') {
     return <button className="skip" onClick={() => { game.introT = 99 }}>건너뛰기 ›</button>
   }
@@ -97,9 +100,10 @@ export function Hud() {
         <button className="interact" onClick={interactNearest}>{PLACE_BY_ID[nearPlace].icon} {PLACE_BY_ID[nearPlace].label} <kbd>E</kbd></button>
       )}
       <div className="zoombtns">
-        <button className={game.watchDog ? "on" : ""} onClick={(e) => { game.watchDog = !game.watchDog; if (game.watchDog) game.camDist = Math.min(game.camDist, 3.4); e.currentTarget.classList.toggle("on", game.watchDog) }} aria-label="반려견 보기">🐶</button>
-        <button onClick={() => { game.camDist = Math.max(MIN_ZOOM, game.camDist - 1.6) }} aria-label="확대">＋</button>
-        <button onClick={() => { game.camDist = Math.min(14, game.camDist + 1.6) }} aria-label="축소">－</button>
+        <button className={game.watchDog ? "on" : ""} onClick={(e) => { game.watchDog = !game.watchDog; if (game.watchDog) { game.camDist = Math.min(game.camDist, 3.4); game.overview = false }; e.currentTarget.classList.toggle("on", game.watchDog) }} aria-label="반려견 보기">🐶</button>
+        <button className={ov ? "on" : ""} onClick={() => { game.overview = !game.overview; if (game.overview) game.watchDog = false; setOv(game.overview) }} aria-label={ov ? '내 위치로 돌아가기' : '섬 전체 보기'}>{ov ? '👣' : '🔭'}</button>
+        <button onClick={() => { game.overview = false; game.camDist = Math.max(MIN_ZOOM, game.camDist - 1.6) }} aria-label="확대">＋</button>
+        <button onClick={() => { game.overview = false; game.camDist = Math.min(14, game.camDist + 1.6) }} aria-label="축소">－</button>
       </div>
       <RunHud />
       {nearNeighbor && (
