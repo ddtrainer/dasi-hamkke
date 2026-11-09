@@ -119,6 +119,9 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 /* calligraphy title */
 .landing .hero h1, .splash-cap b, .flat header h1 { font-family: "Gamja Flower", "Gaegu", cursive; font-weight: 400; letter-spacing: .06em; }
 .landing .hero h1 { font-size: clamp(48px, 10vw, 70px); line-height: 1.05; }
+/* the logo picture replaces the 🐾 icon and the typed title on the landing screen */
+.landing .hero h1.logo-h1 { font-size: 0; margin: 0 0 8px; }
+.landing .hero h1.logo-h1 img { display: block; width: min(92vw, 440px); height: auto; margin: 0 auto; }
 .splash-cap b { font-size: clamp(30px, 6vw, 44px); }
 
 /* photo picker: visually hidden native input (kept in the layout so mobile webviews can open it), big button instead */

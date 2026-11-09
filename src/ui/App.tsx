@@ -98,8 +98,7 @@ function Landing() {
   return (
     <div className="landing">
       <div className="hero">
-        <div className="paw">🐾</div>
-        <h1>댕<span className="nyang">냥</span> 메모리</h1>
+        <h1 className="logo-h1"><img src={import.meta.env.BASE_URL + 'logo.webp'} alt="댕냥 메모리" draggable={false} /></h1>
         <p className="sub">푸른 바다와 꽃이 가득한 세상에서<br />다시 함께 걷고 행복을 나누는 시간.</p>
         <p className="sub sub2">너를 향한 내 따뜻한 마음과 숨결이 닿기를.<br />언제나 사랑해, 영원히.</p>
         {gl ? (
