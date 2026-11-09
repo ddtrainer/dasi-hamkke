@@ -70,6 +70,7 @@ export function interactNearest() {
   if (st.nearSlot === null) {
     if (st.nearMarket && !st.marketOpen) st.set({ marketOpen: true })
     else if (!st.nearMarket && st.nearPlace) placeAction(st.nearPlace)
+    else if (!st.nearMarket) st.say('가까이 가면 이 버튼(E)으로 분향소·마켓·별 보기 같은 곳을 열 수 있어요. 🌸')
     return
   }
   const m = st.memorials.find((x) => x.slot === st.nearSlot)

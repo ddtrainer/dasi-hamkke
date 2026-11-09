@@ -324,7 +324,7 @@ export function PetModal() {
         )}
         {target && companionId === target && <button type="button" className="btn small" onClick={() => void rest()}>🌙 분향소에서 쉬게 하기</button>}
         <PetEditor d={d} setD={setD} photoUrl={m?.photoUrl} />
-        <div className="row2 end">
+        <div className="row2 end stick">
           <button className="btn" onClick={close}>취소</button>
           <button className="btn primary" onClick={save}>저장</button>
         </div>

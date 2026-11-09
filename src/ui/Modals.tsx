@@ -193,7 +193,7 @@ export function RegisterModal() {
           <label className="radio"><input type="radio" checked={f.visibility === 'private'} onChange={() => setF({ ...f, visibility: 'private' })} /> 비공개 — 나만 볼 수 있어요</label>
         </fieldset>
         <p className="hint">사진은 업로드 전 브라우저에서 위치 정보(EXIF)를 제거하고 크기를 줄여요.</p>
-        <button className="btn primary" disabled={busy}>{busy ? '만드는 중…' : '분향소 만들기'}</button>
+        <button className="btn primary stick" disabled={busy}>{busy ? '만드는 중…' : '분향소 만들기'}</button>
       </form>
     </div>
   )

@@ -196,11 +196,11 @@ export function ShootingStars() {
     const g = c.getContext('2d')!
     const gr = g.createLinearGradient(0, 0, 256, 0)
     gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.55, 'rgba(190,215,255,0.3)'); gr.addColorStop(0.9, 'rgba(235,245,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,1)')
-    g.fillStyle = gr; g.beginPath(); g.moveTo(0, 8); g.lineTo(230, 3); g.lineTo(256, 8); g.lineTo(230, 13); g.closePath(); g.fill()
-    const hg = g.createRadialGradient(244, 8, 0, 244, 8, 12); hg.addColorStop(0, 'rgba(255,255,255,1)'); hg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = hg; g.fillRect(228, 0, 28, 16)
+    g.fillStyle = gr; g.beginPath(); g.moveTo(0, 8); g.lineTo(236, 6.6); g.lineTo(256, 8); g.lineTo(236, 9.4); g.closePath(); g.fill()
+    const hg = g.createRadialGradient(248, 8, 0, 248, 8, 6); hg.addColorStop(0, 'rgba(255,255,255,1)'); hg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = hg; g.fillRect(238, 0, 18, 16)
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t
   }, [])
-  const st = useRef({ next: 2.5, t: -1, az: 0, el: 0.8, spin: 0 })
+  const st = useRef({ next: 2.5, t: -1, dir: new THREE.Vector3(), v: new THREE.Vector3(-1, 0, 0) })
   if (import.meta.env.DEV) (window as unknown as { __shoot: () => void }).__shoot = () => { st.current.next = 0 }
   const basisX = useMemo(() => new THREE.Vector3(), [])
   const basisY = useMemo(() => new THREE.Vector3(), [])
@@ -210,15 +210,21 @@ export function ShootingStars() {
     const s = st.current, n = tod.night
     if (n < 0.6) { mesh.current.visible = false; s.t = -1; return }
     s.next -= dt
-    if (s.t < 0 && s.next <= 0) { s.t = 0; s.az = Math.random() * Math.PI * 2; s.el = 0.45 + Math.random() * 0.75; s.spin = (Math.random() < 0.5 ? -1 : 1); s.next = 4 + Math.random() * 7 }
+    if (s.t < 0 && s.next <= 0) {
+      // appears somewhere in the part of the sky the camera is looking at and always streaks from the right of the screen to the left, slightly downwards
+      s.t = 0; s.next = 4 + Math.random() * 7
+      const f = camera.getWorldDirection(new THREE.Vector3())
+      const r = new THREE.Vector3().crossVectors(f, new THREE.Vector3(0, 1, 0)).setY(0).normalize()
+      s.dir.copy(f).addScaledVector(r, (Math.random() - 0.5) * 1.0).addScaledVector(new THREE.Vector3(0, 1, 0), (Math.random() - 0.35) * 0.5)
+      if (s.dir.y < 0.25) s.dir.y = 0.25 + Math.random() * 0.3
+      s.dir.normalize()
+      s.v.copy(r).multiplyScalar(-1).add(new THREE.Vector3(0, -0.45, 0)).normalize()
+    }
     if (s.t < 0) { mesh.current.visible = false; return }
     s.t += dt / 1.4
     if (s.t > 1) { s.t = -1; mesh.current.visible = false; return }
     const R = 600
-    const dir = new THREE.Vector3(Math.cos(s.az) * Math.cos(s.el), Math.sin(s.el), Math.sin(s.az) * Math.cos(s.el))
-    // travel direction: sideways along the sky and downwards
-    const side = new THREE.Vector3(-Math.sin(s.az), 0, Math.cos(s.az)).multiplyScalar(s.spin)
-    const v = side.clone().add(new THREE.Vector3(0, -0.5, 0)).normalize()
+    const dir = s.dir, v = s.v
     const pos = camera.position.clone().addScaledVector(dir, R).addScaledVector(v, (s.t - 0.5) * 360)
     mesh.current.position.copy(pos)
     basisZ.copy(camera.position).sub(pos).normalize()
@@ -231,8 +237,8 @@ export function ShootingStars() {
   })
   return (
     <mesh ref={mesh} visible={false} renderOrder={-5}>
-      <planeGeometry args={[230, 12]} />
-      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthWrite={false} depthTest={false} fog={false} blending={THREE.AdditiveBlending} />
+      <planeGeometry args={[230, 7]} />
+      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthWrite={false} depthTest fog={false} blending={THREE.AdditiveBlending} />
     </mesh>
   )
 }

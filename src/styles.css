@@ -230,3 +230,29 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 .runhud .rrow { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .runhud .rrow button { border: none; background: #ffe0a8; border-radius: 999px; padding: 8px 14px; font-size: .88rem; }
 .runhud .rrow button.big { background: #ffb3d0; font-size: 1.05rem; padding: 12px 22px; }
+
+/* phone fit: dialogs always fit the visible screen (dvh excludes the browser's address / button bars) */
+.overlay { height: 100vh; height: 100dvh; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+.card { max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+/* character chooser: the preview takes whatever height is left, the enter button never scrolls away */
+.avatarm { padding: 16px 16px 0; gap: 8px; }
+.avatarm h2 { margin: 0; font-size: 1.15rem; padding-right: 28px; }
+.avatarm .hint { margin: 0; font-size: .76rem; line-height: 1.35; }
+.avatarm .pet-prev.tall { height: clamp(140px, 38dvh, 300px); }
+.avatarm .avopt { padding: 8px 6px; }
+.avatarm .avopt small { display: none; }
+.avatarm > .btn.primary.big { position: sticky; bottom: 0; margin: 4px -16px 0; width: calc(100% + 32px); border-radius: 0 0 22px 22px; padding: 16px; flex: none; }
+@media (max-height: 640px) { .avatarm .hint { display: none; } .avatarm .avopt .ic { font-size: 1.3rem; } }
+/* other dialogs on short phones */
+@media (max-height: 720px) {
+  .card { padding: 16px; gap: 8px; }
+  .pet-prev { height: 190px; }
+  .cmp-ph { height: 170px; }
+}
+/* long dialogs: the save / create button stays visible at the bottom while the form scrolls */
+.card { --cp: 22px; }
+@media (max-height: 720px) { .card { --cp: 16px; } }
+.card .stick { position: sticky; bottom: calc(-1 * var(--cp)); z-index: 2; margin-left: calc(-1 * var(--cp)); margin-right: calc(-1 * var(--cp)); padding: 10px var(--cp) calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(#fffdf800, #fffdf8 30%); flex: none; }
+.card button.stick { width: calc(100% + 2 * var(--cp)); border-radius: 0; }
+.card .row2.stick { justify-content: flex-end; }
+.card button.btn.primary.stick { background: linear-gradient(#ff9ec4, #f77fae); padding: 14px var(--cp) calc(14px + env(safe-area-inset-bottom)); }

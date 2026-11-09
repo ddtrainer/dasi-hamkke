@@ -108,7 +108,7 @@ export function Hud() {
           </div>
         </>
       ) : (
-        <div className="help">WASD/방향키 이동 · Shift 달리기 · 드래그 시점 · 휠 줌 · E 상호작용 · C 앉기</div>
+        <div className="help">WASD/방향키 이동 · Shift 달리기 · 드래그 시점 · 휠 줌 · E 가까운 곳 열기(분향소·마켓·별 보기) · C 앉기 · H 인사</div>
       )}
     </>
   )

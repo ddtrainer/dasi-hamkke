@@ -232,8 +232,11 @@ export function StreamBridge() {
 export function Gazebo() {
   const x = GAZEBO.x, z = GAZEBO.z
   const y = terrainHeight(x, z)
+  const g = useRef<THREE.Group>(null!)
+  // while lying on the neighbouring stargazing hill the roof and pillars would hide the sky and sea, so the gazebo steps aside
+  useFrame(() => { g.current.visible = !game.stargaze })
   return (
-    <group position={[x, y, z]}>
+    <group ref={g} position={[x, y, z]}>
       <mesh position={[0, 0.1, 0]}><cylinderGeometry args={[2.9, 3.1, 0.25, 8]} /><meshStandardMaterial color={STONE} /></mesh>
       {Array.from({ length: 4 }, (_, i) => {
         const a = i * Math.PI / 2 + Math.PI / 4

@@ -74,11 +74,12 @@ export function placeAction(id: string) {
   }
   if (id === 'stars') {
     if (game.stargaze) { game.wantSit = false; game.stargaze = false; return }
-    game.wantSit = true; game.stargaze = true; game.camPitch = 0.6; game.camYaw = 2.07
+    game.wantSit = true; game.stargaze = true; game.camPitch = 0.12; game.camYaw = STAR_YAW; game.heading = STAR_YAW + Math.PI // face the open sea (north-east), away from the memorial hall
     if (st.tod !== 'night') st.set({ tod: 'night' })
     st.say('🌌 누워서 밤하늘을 올려다봐요. 드래그로 하늘을 둘러보고, 움직이면 돌아와요. 별똥별에 소원을 빌어 보세요 🌠')
   }
 }
+const STAR_YAW = -0.2 // camera sits just south of the player, looking north over the sea (the gazebo stays off to the right)
 export const PLACE_BY_ID = Object.fromEntries(PLACES.map((p) => [p.id, p]))
 
 /** Light the shrine photo and let its dog step out to walk with the visitor. */

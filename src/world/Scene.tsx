@@ -46,8 +46,8 @@ void main(){
     // the Milky Way: a tilted band with a bright bulge, dust lanes and a dense carpet of faint stars
     vec3 gn = normalize(vec3(0.64, 0.15, 0.75));
     float lat = dot(d, gn);
-    float band = exp(-lat*lat / 0.03);
-    float core = pow(max(dot(d, normalize(vec3(-0.62, 0.5, 0.52))), 0.0), 4.0);
+    float band = exp(-lat*lat / 0.009);
+    float core = pow(max(dot(d, normalize(vec3(-0.62, 0.5, 0.52))), 0.0), 9.0);
     float cloud = vnoise(d*7.0) * 0.6 + vnoise(d*16.0) * 0.3 + vnoise(d*38.0) * 0.1;
     float lane = smoothstep(0.52, 0.78, vnoise(d*10.0 + 4.0)) * (1.0 - smoothstep(0.0, 0.55, max(abs(lat) - 0.02, 0.0)));
     vec3 mwCol = mix(vec3(0.40, 0.48, 0.85), vec3(1.0, 0.84, 0.66), core * 0.8);
@@ -75,7 +75,7 @@ const DAY: EnvSpec = { top: '#48a0ff', mid: '#8fccff', hor: '#ebf8ff', sun: [0.5
 const PRESETS: Record<string, Env> = {
   day: mk(DAY),
   sunset: mk({ top: '#4d4d9e', mid: '#f28c73', hor: '#ffc78c', sun: [0.55, 0.1, -0.8], sunCol: '#ff9a4d', sunPow: 60, stars: 0, hemiSky: '#ffd7b8', hemiGround: '#c98c70', hemiI: 1.1, amb: '#ffd0b0', ambI: 0.24, dir: '#ff9d55', dirI: 1.3, off: [46, 15, 20], fog: '#f3c9a8', tint: '#ffd1b8', night: 0, dusk: 1 }),
-  night: mk({ top: '#05092a', mid: '#0f1740', hor: '#242e5c', sun: [-0.4, 0.5, -0.7], sunCol: '#c4d4ff', sunPow: 1800, stars: 1, hemiSky: '#4e64a6', hemiGround: '#222d50', hemiI: 1.0, amb: '#6a7ab0', ambI: 0.4, dir: '#a9bcff', dirI: 0.8, off: [-25, 40, 20], fog: '#141a38', tint: '#47598c', night: 1, dusk: 0 }),
+  night: mk({ top: '#0b1a4e', mid: '#15296a', hor: '#2c3f86', sun: [-0.4, 0.5, -0.7], sunCol: '#c4d4ff', sunPow: 1800, stars: 1, hemiSky: '#4e64a6', hemiGround: '#222d50', hemiI: 1.0, amb: '#6a7ab0', ambI: 0.4, dir: '#a9bcff', dirI: 0.8, off: [-25, 40, 20], fog: '#141a38', tint: '#47598c', night: 1, dusk: 0 }),
 }
 const env: Env = mk(DAY)
 if (import.meta.env.DEV) (window as unknown as { __env: Env }).__env = env
