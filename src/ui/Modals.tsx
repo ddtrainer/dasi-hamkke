@@ -94,18 +94,19 @@ export function ShrineModal() {
         {hasDog && (
           <button className="btn primary call" onClick={isOut ? restDog : call}>{isOut ? `🌙 ${m.petName} 쉬게 하기` : `✨ ${m.petName}, 섬에서 다시 함께하기`}</button>
         )}
-        <div className="row">
+        {!mine && <p className="hint">🌿 다른 분의 소중한 분향소예요. 헌화·촛불·편지는 주인만 할 수 있어요. 조용히 마음으로 함께해 주세요.</p>}
+        {mine && <div className="row">
           <button className="btn primary" disabled={busy} onClick={offer}>🌸 헌화하기</button>
           <button className="btn" disabled={busy || litByMe} onClick={light}>{litByMe ? '🕯️ 오늘 촛불을 켰어요' : '🕯️ 촛불 켜기'}</button>
           <button className="btn" onClick={() => setWriting((w) => !w)}>✉️ 편지 쓰기</button>
-        </div>
-        {writing && (
+        </div>}
+        {mine && writing && (
           <div className="letter">
             <textarea maxLength={LIMITS.letter} value={letter} onChange={(e) => setLetter(e.target.value)} placeholder="전하고 싶은 말을 적어 주세요" rows={4} />
             <div className="row"><span className="count">{letter.length}/{LIMITS.letter}</span><button className="btn primary" disabled={busy || !letter.trim()} onClick={send}>남기기</button></div>
           </div>
         )}
-        {letters.length > 0 && (
+        {mine && letters.length > 0 && (
           <div className="letters"><h4>남겨진 편지</h4>
             {letters.map((t) => <div key={t.id} className="note">{t.body}<time>{new Date(t.createdAt).toLocaleDateString('ko-KR')}{t.authorId === userId ? ' · 내가 쓴 편지' : ''}</time></div>)}
           </div>

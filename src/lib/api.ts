@@ -104,6 +104,8 @@ const localApi: Api = {
   },
   async addTribute(mid, kind, body) {
     const db = loadDb()
+    const target = db.memorials.find((x) => x.id === mid)
+    if (!target || target.ownerId !== db.userId) throw new Error('헌화·촛불·편지는 분향소 주인만 할 수 있어요.')
     if (kind === 'candle' && db.tributes.some((t) => t.kind === 'candle' && t.memorialId === mid && t.authorId === db.userId && kstDay(t.createdAt) === kstDay())) throw new Error(ALREADY_LIT)
     const t: Tribute = { id: uid(), memorialId: mid, authorId: db.userId, kind, body: clean(body, LIMITS.letter), createdAt: new Date().toISOString() }
     db.tributes.push(t); saveDb(db); return t
