@@ -78,7 +78,7 @@ function Splash() {
         style={zoom ? { transform: 'scale(2.6)', transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}>
         <img src={import.meta.env.BASE_URL + 'island.webp'} alt="" draggable={false} />
       </div>
-      <div className="splash-cap"><b>댕<i className="nyang">냥</i> 메모리</b><span>너를 향한 내 마음과 숨결을 느껴봐<br />영원히 널 사랑해</span></div>
+      <div className="splash-cap"><img className="splash-logo" src={import.meta.env.BASE_URL + 'logo.webp'} alt="댕냥 메모리" draggable={false} /><span>너를 향한 내 따뜻한 마음과 숨결이 닿기를.<br />언제나 사랑해, 영원히.</span></div>
       <div className="splash-bar"><i style={{ animationDuration: `${SPLASH_MS}ms` }} /></div>
       <div className="splash-ctl">
         <button className="splash-btn" onClick={stop(paused ? resume : pause)} aria-label={paused ? '계속' : '멈춤'}>{paused ? '▶ 계속' : '⏸ 멈춤'}</button>
@@ -107,7 +107,7 @@ function Landing() {
           <p className="warn">이 브라우저에서는 3D를 실행할 수 없어요. 2D 추모 화면을 이용해 주세요.</p>
         )}
         <button className="btn big" onClick={() => set({ screen: 'flat' })}>2D 추모 화면으로 보기</button>
-        <p className="hint">PC: WASD·마우스 / 모바일: 조이스틱 · {api.mode === 'local' ? '이 기기에만 저장되는 체험 모드' : '클라우드 저장 모드'}</p>
+        <p className="hint">{matchMedia('(pointer: coarse)').matches ? '' : 'PC: WASD·마우스로 움직여요 · '}{api.mode === 'local' ? '기록은 이 기기에만 저장돼요' : '클라우드 저장 모드'}</p>
       </div>
     </div>
   )
@@ -120,7 +120,7 @@ function Flat() {
     <div className="flat">
       <h2 className="flat-title">2D 추모 화면</h2>
       <header>
-        <h1>🐾 댕<span className="nyang">냥</span> 메모리</h1>
+        <h1 className="flat-logo"><img src={import.meta.env.BASE_URL + 'logo.webp'} alt="댕냥 메모리" draggable={false} /></h1>
         <div className="row">
           <button className="btn primary" onClick={() => set({ registerSlot: null })}>🕯️ 분향소 만들기</button>
           {gl && <button className="btn" onClick={() => set({ avatarFor: 'enter' })}>🌸 3D 공원 입장</button>}

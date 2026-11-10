@@ -119,6 +119,10 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 /* calligraphy title */
 .landing .hero h1, .splash-cap b, .flat header h1 { font-family: "Gamja Flower", "Gaegu", cursive; font-weight: 400; letter-spacing: .06em; }
 .landing .hero h1 { font-size: clamp(48px, 10vw, 70px); line-height: 1.05; }
+/* the same logo on the entrance picture and on the 2D screen */
+.splash-cap .splash-logo { display: block; width: min(72vw, 340px); height: auto; margin: 0 auto; filter: drop-shadow(0 3px 10px #0005); }
+.flat header h1.flat-logo { font-size: 0; margin: 0; }
+.flat header h1.flat-logo img { display: block; width: min(52vw, 220px); height: auto; }
 /* the logo picture replaces the 🐾 icon and the typed title on the landing screen */
 .landing .hero h1.logo-h1 { font-size: 0; margin: 0 0 8px; }
 .landing .hero h1.logo-h1 img { display: block; width: min(92vw, 440px); height: auto; margin: 0 auto; }
@@ -286,7 +290,9 @@ textarea, input[type=text], input:not([type]), input[type=date], select { width:
 
 /* zoom buttons (pinching with two fingers works too) */
 .zoombtns { position: absolute; right: max(14px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; }
-.zoombtns button { width: 44px; height: 44px; border-radius: 50%; border: none; background: #ffffffd9; box-shadow: 0 2px 8px #0003; font-size: 1.3rem; line-height: 1; }
+.zoombtns button { width: 58px; padding: 7px 0 6px; border-radius: 16px; border: none; background: #ffffffd9; box-shadow: 0 2px 8px #0003; line-height: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4a3b30; }
+.zoombtns button i { font-style: normal; font-size: 1.35rem; }
+.zoombtns button span { font-size: .68rem; font-weight: 600; white-space: nowrap; }
 .zoombtns button.on { background: #ffd2e4; }
 
 /* contextual buttons sit in the bottom-right corner so they never cover the characters in the middle of the screen */
