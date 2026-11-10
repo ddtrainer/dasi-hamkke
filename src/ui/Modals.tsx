@@ -9,7 +9,7 @@ import { offerFlowersAnim } from '../world/Player'
 import { game } from '../world/game'
 import { SLOTS } from '../world/terrain'
 import { PetEditor, coatFromPhoto } from './PetModal'
-import { DEFAULT_PET, type PetProfile } from '../lib/pet'
+import { DEFAULT_PET, breedProfile, catProfile, type PetProfile } from '../lib/pet'
 
 const fmt = (d: string) => (d ? d.split('-').join('.') : '—')
 
@@ -128,6 +128,11 @@ export function RegisterModal() {
   const [dogOpen, setDogOpen] = useState(false)
   const [fitted, setFitted] = useState(false)
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  // the editor always matches the chosen kind: a cat gets the cat editor, a dog the dog editor (also after a draft is restored)
+  useEffect(() => {
+    if (f.species === '고양이' && dog.kind !== 'cat') setDog(catProfile('tabby', dog.name))
+    if (f.species === '강아지' && dog.kind !== 'dog') setDog(breedProfile('chihuahua', dog.name))
+  }, [f.species, dog.kind]) // eslint-disable-line react-hooks/exhaustive-deps
   if (registerSlot === undefined) return null
   const close = () => set({ registerSlot: undefined })
   const myCount = memorials.filter((x) => x.ownerId === userId).length
@@ -146,7 +151,7 @@ export function RegisterModal() {
     setBusy(true)
     try {
       const rec = await api.create({ ...f, photo }, registerSlot ?? undefined)
-      if (f.species === '강아지') setPetFor(rec.id, { ...dog, name: rec.petName })
+      if (f.species === '강아지' || f.species === '고양이') setPetFor(rec.id, { ...dog, kind: f.species === '고양이' ? 'cat' : 'dog', name: rec.petName })
       resume.draft = null
       await refresh(); close(); say(`${rec.petName}의 분향소를 만들었어요.`)
       if (useStore.getState().screen === 'world') {
@@ -180,9 +185,9 @@ export function RegisterModal() {
           <small>사진은 자동으로 작게 줄여 저장돼요. 갤러리 사진이 안 보이면 폰 설정에서 브라우저의 '사진 및 동영상' 권한을 허용해 주세요. 사진 없이도 만들 수 있어요.</small>
         </div>
         {preview && <img className="preview" src={preview} alt="미리보기" />}
-        {f.species === '강아지' ? (
+        {f.species === '강아지' || f.species === '고양이' ? (
           <details className="dogform" open={dogOpen} onToggle={(e) => setDogOpen((e.target as HTMLDetailsElement).open)}>
-            <summary>🐶 섬에서 다시 만날 모습 꾸미기 (추천)</summary>
+            <summary>{f.species === '고양이' ? '🐱' : '🐶'} 섬에서 다시 만날 모습 꾸미기 (추천)</summary>
             <p className="hint">{fitted ? '✨ 올려 주신 사진의 색으로 먼저 맞춰 봤어요. 우리 아이와 더 닮게 고쳐 주세요.' : '분향소를 만들면 사진 속 아이가 섬으로 걸어 나와 함께 걸어요. 우리 아이와 닮게 꾸며 주세요.'} 나중에 언제든 고칠 수 있어요.</p>
             <PetEditor d={dog} setD={setDog} photoUrl={preview} />
           </details>

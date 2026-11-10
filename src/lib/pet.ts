@@ -27,9 +27,16 @@ export interface Signature {
 }
 export const NEUTRAL: Signature = { marks: [], socks: false, blaze: false, tailTip: false, browDots: false, headSize: 1, eyeSize: 1, eyeGap: 1, earSize: 1, noseSize: 1 }
 
+/** which kind of companion this is: dogs and cats walk the island (cats use their own model, see CatModel) */
+export type Kind = 'dog' | 'cat'
+export type CatBreedId = 'korean' | 'russian' | 'tabby' | 'persian'
+export const CAT_BREED_IDS: CatBreedId[] = ['korean', 'russian', 'tabby', 'persian']
+
 export interface PetProfile extends Signature {
   name: string
-  breed: BreedId
+  kind: Kind
+  breed: BreedId // dogs only
+  catBreed: CatBreedId // cats only
   coat: string // main colour
   accent: string // markings: tan points, patches, spots
   white: string // chest / muzzle / paws
@@ -45,7 +52,22 @@ export interface PetProfile extends Signature {
   snout: number // 0.5 – 1.5
 }
 
-export const BREEDS: Record<BreedId, { label: string; icon: string; p: Omit<PetProfile, 'name' | 'breed' | keyof Signature> }> = {
+type Look = Omit<PetProfile, 'name' | 'kind' | 'breed' | 'catBreed' | keyof Signature>
+
+/** cat presets: the same look fields as the dog presets, so the shared editor sliders work for both */
+export const CAT_BREEDS: Record<CatBreedId, { label: string; icon: string; p: Look }> = {
+  tabby: { label: '고등어 태비', icon: '🐯', p: { coat: '#9a8169', accent: '#4a3b30', white: '#fbf4e8', pattern: 'tan', ears: 'perky', tail: 'straight', coatStyle: 'smooth', eye: '#b8862a', nose: '#c48a86', size: 0.85, legs: 0.9, chunk: 0.95, snout: 0.8 } },
+  korean: { label: '코리안 숏헤어', icon: '🐈', p: { coat: '#e3b98a', accent: '#b8844f', white: '#fffaf2', pattern: 'urajiro', ears: 'perky', tail: 'straight', coatStyle: 'smooth', eye: '#6fa85a', nose: '#d78f8b', size: 0.85, legs: 0.85, chunk: 0.95, snout: 0.75 } },
+  russian: { label: '러시안 블루', icon: '🩶', p: { coat: '#8f98a6', accent: '#6d7685', white: '#c8ced8', pattern: 'solid', ears: 'big', tail: 'straight', coatStyle: 'smooth', eye: '#7dc87d', nose: '#6e7887', size: 0.9, legs: 0.95, chunk: 0.95, snout: 0.7 } },
+  persian: { label: '페르시안', icon: '☁️', p: { coat: '#f0e6d8', accent: '#d5c2a6', white: '#ffffff', pattern: 'solid', ears: 'round', tail: 'plume', coatStyle: 'fluffy', eye: '#c79a3c', nose: '#d99a95', size: 0.95, legs: 0.8, chunk: 1.15, snout: 0.55 } },
+}
+export const CAT_BREED_LIST = CAT_BREED_IDS
+
+export function catProfile(id: CatBreedId, name = ''): PetProfile {
+  return { name, kind: 'cat', breed: 'mix', catBreed: id, ...NEUTRAL, ...CAT_BREEDS[id].p }
+}
+
+export const BREEDS: Record<BreedId, { label: string; icon: string; p: Omit<PetProfile, 'name' | 'kind' | 'breed' | 'catBreed' | keyof Signature> }> = {
   chihuahua: { label: '치와와', icon: '🐕', p: { coat: '#211d20', accent: '#d9a059', white: '#fbf0e0', pattern: 'tan', ears: 'round', tail: 'plume', coatStyle: 'fluffy', eye: '#4a2a18', nose: '#141012', size: 0.8, legs: 1, chunk: 1, snout: 1 } },
   maltese: { label: '말티즈', icon: '🐩', p: { coat: '#fbf7ee', accent: '#efe2c8', white: '#ffffff', pattern: 'solid', ears: 'drop', tail: 'curl', coatStyle: 'fluffy', eye: '#2a1a12', nose: '#141012', size: 0.85, legs: 0.85, chunk: 1.05, snout: 0.7 } },
   poodle: { label: '푸들', icon: '🐩', p: { coat: '#d9a77a', accent: '#c48e5f', white: '#e8c9a4', pattern: 'solid', ears: 'drop', tail: 'curl', coatStyle: 'curly', eye: '#2a1a12', nose: '#2a1a12', size: 1.0, legs: 1.2, chunk: 0.95, snout: 1.15 } },
@@ -60,7 +82,7 @@ export const BREEDS: Record<BreedId, { label: string; icon: string; p: Omit<PetP
 export const BREED_IDS = Object.keys(BREEDS) as BreedId[]
 
 export function breedProfile(id: BreedId, name = ''): PetProfile {
-  return { name, breed: id, ...NEUTRAL, ...BREEDS[id].p }
+  return { name, kind: 'dog', breed: id, catBreed: 'tabby', ...NEUTRAL, ...BREEDS[id].p }
 }
 
 export const DEFAULT_PET: PetProfile = breedProfile('chihuahua')
@@ -86,11 +108,15 @@ function sanitizeMarks(raw: unknown): Mark[] {
 
 export function sanitizePet(raw: unknown): PetProfile {
   const m = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const kind = oneOf(m.kind, ['dog', 'cat'] as const, 'dog')
   const breed = oneOf(m.breed, BREED_IDS, 'chihuahua')
-  const d = breedProfile(breed)
+  const catBreed = oneOf(m.catBreed, CAT_BREED_IDS, 'tabby')
+  const d = kind === 'cat' ? catProfile(catBreed) : breedProfile(breed)
   return {
     name: typeof m.name === 'string' ? m.name.slice(0, 12) : '',
+    kind,
     breed,
+    catBreed,
     coat: col(m.coat, d.coat), accent: col(m.accent, d.accent), white: col(m.white, d.white),
     pattern: oneOf(m.pattern, ['solid', 'tan', 'tuxedo', 'urajiro', 'patch', 'spots'] as const, d.pattern),
     ears: oneOf(m.ears, ['round', 'perky', 'big', 'drop', 'fold'] as const, d.ears),

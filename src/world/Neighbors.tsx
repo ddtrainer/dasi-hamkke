@@ -3,7 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { game } from './game'
 import { AvatarBody, LOOKS, type AvatarRefs } from './Characters'
-import { DogBody, EAR_BASE, type DogRefs } from './DogModel'
+import { EAR_BASE, type DogRefs } from './DogModel'
+import { PetBody } from './PetBody'
 import { NBR, stepNeighbors, type Nbr } from './visitors'
 
 function NeighborView({ n }: { n: Nbr }) {
@@ -52,7 +53,7 @@ function NeighborView({ n }: { n: Nbr }) {
   return (
     <>
       <AvatarBody look={LOOKS[n.look]} goods={[]} refs={a} />
-      <group ref={dogRoot} scale={0.58 * n.pet.size}><DogBody pet={n.pet} outfit={null} refs={dog} /></group>
+      <group ref={dogRoot} scale={0.58 * n.pet.size}><PetBody pet={n.pet} outfit={null} refs={dog} /></group>
     </>
   )
 }

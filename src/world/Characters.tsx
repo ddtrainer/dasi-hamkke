@@ -4,7 +4,8 @@ import * as THREE from 'three'
 import { game, benchSeat, BENCH_SEAT_Y } from './game'
 import { useStore } from '../lib/store'
 import { groundHeight, canStand, moveWithCollision } from './terrain'
-import { DogBody, EAR_BASE } from './DogModel'
+import { EAR_BASE } from './DogModel'
+import { PetBody } from './PetBody'
 import type { AvatarId } from '../lib/store'
 
 const lerp = THREE.MathUtils.lerp
@@ -281,6 +282,7 @@ export function Dog() {
   const comp = companionId && memorials.some((m) => m.id === companionId && m.ownerId === userId) ? pets[companionId] ?? null : null
   const hidden = !comp && memorials.some((m) => m.ownerId === userId && pets[m.id])
   const pet = comp ?? defPet
+  const isCat = pet.kind === 'cat'
   const hiddenRef = useRef(hidden)
   hiddenRef.current = hidden
   const root = useRef<THREE.Group>(null!)
@@ -370,7 +372,8 @@ export function Dog() {
     s.y = lerp(s.y, onBench && d < 0.7 ? bn.y + BENCH_SEAT_Y : groundHeight(s.x, s.z), Math.min(1, dt * 12))
     s.ph += dt * (moving ? 17 : 0)
     const t = game.time
-    root.current.position.set(s.x, s.y + (moving ? Math.abs(Math.sin(s.ph)) * 0.035 : 0) + (treat ? Math.abs(Math.sin(t * 9)) * 0.1 : 0) + (1 - grow) * 0.55, s.z)
+    // cats bob a little higher and quicker: a lighter, springier trot
+    root.current.position.set(s.x, s.y + (moving ? Math.abs(Math.sin(s.ph)) * (isCat ? 0.05 : 0.035) : 0) + (treat ? Math.abs(Math.sin(t * 9)) * 0.1 : 0) + (1 - grow) * 0.55, s.z)
     root.current.rotation.y = s.hd
     game.dog.x = s.x; game.dog.y = s.y; game.dog.z = s.z
 
@@ -383,19 +386,25 @@ export function Dog() {
     legs[2].current.rotation.x = -sw * (1 - sit) + sit * -1.35
     rig.current.rotation.x = -0.38 * sit + (moving ? Math.sin(s.ph * 2) * 0.03 : 0)
     rig.current.position.y = 0.3 - 0.09 * sit
-    tail.current.rotation.z = Math.sin(t * (treat ? 22 : moving ? 15 : 9)) * (0.55 + sit * 0.2)
-    head.current.rotation.x = Math.sin(t * 2) * 0.03 + sit * 0.5 + (eating ? 0.25 + Math.abs(Math.sin(t * 9)) * 0.35 : 0) + (moving ? 0.05 : 0) + (treat ? Math.sin(t * 14) * 0.06 : 0)
+    if (isCat) {
+      // a cat's tail sways slowly and rises when it is happy; its head barely bobs and it does not stick its tongue out
+      tail.current.rotation.z = Math.sin(t * (treat ? 9 : moving ? 6 : 2.2)) * (treat ? 0.5 : 0.22) + (treat ? 0.25 : 0)
+      head.current.rotation.x = Math.sin(t * 1.6) * 0.02 + sit * 0.35 + (eating ? 0.2 + Math.abs(Math.sin(t * 7)) * 0.25 : 0) + (moving ? 0.03 : 0)
+    } else {
+      tail.current.rotation.z = Math.sin(t * (treat ? 22 : moving ? 15 : 9)) * (0.55 + sit * 0.2)
+      head.current.rotation.x = Math.sin(t * 2) * 0.03 + sit * 0.5 + (eating ? 0.25 + Math.abs(Math.sin(t * 9)) * 0.35 : 0) + (moving ? 0.05 : 0) + (treat ? Math.sin(t * 14) * 0.06 : 0)
+    }
     head.current.rotation.y = moving ? 0 : Math.sin(t * 0.7) * 0.25 * sit
     const flop = moving ? Math.sin(s.ph) * 0.25 : Math.sin(t * 1.5) * 0.03
     earL.current.rotation.x = flop; earR.current.rotation.x = flop
     earL.current.rotation.z = earBase.current + flop * 0.4; earR.current.rotation.z = -earBase.current - flop * 0.4
-    tongue.current.visible = moving || sit > 0.5 || eating
+    tongue.current.visible = !isCat && (moving || sit > 0.5 || eating)
     tongue.current.scale.y = 1 + (moving ? Math.sin(s.ph * 2) * 0.25 : Math.sin(t * 5) * 0.12)
   })
 
   return (
     <group ref={root} scale={0.58 * pet.size}>
-      <DogBody pet={pet} outfit={outfit} refs={refs} />
+      <PetBody pet={pet} outfit={outfit} refs={refs} />
     </group>
   )
 }

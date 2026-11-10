@@ -7,7 +7,8 @@ import { defaultPortrait } from '../lib/image'
 import type { Memorial } from '../lib/types'
 import { goToSlot } from './actions'
 import { game } from './game'
-import { DogBody, EAR_BASE } from './DogModel'
+import { EAR_BASE } from './DogModel'
+import { PetBody } from './PetBody'
 import type { PetProfile } from '../lib/pet'
 
 function nameTexture(name: string, dates: string) {
@@ -90,7 +91,7 @@ function RestingDog({ pet, x, z, ry }: { pet: PetProfile; x: number; z: number; 
   })
   return (
     <group ref={root} position={[x, 0.3, z]} rotation-y={ry} scale={0.58 * pet.size * 0.9}>
-      <DogBody pet={pet} outfit={null} refs={refs} />
+      <PetBody pet={pet} outfit={null} refs={refs} />
     </group>
   )
 }

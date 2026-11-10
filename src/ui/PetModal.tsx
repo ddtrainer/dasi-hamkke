@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../lib/store'
-import { BREEDS, BREED_IDS, breedProfile, savePet, MAX_MARKS, type Mark, type PartId, type PetProfile, type Pattern, type EarType, type TailType, type CoatStyle } from '../lib/pet'
-import { DogBody, EAR_BASE } from '../world/DogModel'
+import { BREEDS, BREED_IDS, breedProfile, CAT_BREEDS, CAT_BREED_IDS, catProfile, savePet, MAX_MARKS, type Mark, type PartId, type PetProfile, type Pattern, type EarType, type TailType, type CoatStyle } from '../lib/pet'
+import { EAR_BASE } from '../world/DogModel'
+import { PetBody } from '../world/PetBody'
 import { chime } from '../lib/audio'
 
 interface Paint { on: boolean; color: string; size: number }
@@ -58,7 +59,7 @@ function DogPreview({ pet, paint, onMark }: { pet: PetProfile; paint: Paint; onM
         onPointerMissed={() => { drag.current.on = false }}
       >
         <group position={[0, 0, 0]} scale={0.58 * pet.size}>
-          <DogBody pet={pet} outfit={null} refs={refs} />
+          <PetBody pet={pet} outfit={null} refs={refs} />
         </group>
       </group>
     </>
@@ -241,8 +242,12 @@ export function PetEditor({ d, setD, photoUrl }: { d: PetProfile; setD: React.Di
           <small>{paint.on ? '반려견을 누르면 점이 찍혀요' : '드래그하면 돌려볼 수 있어요'}</small>
         </div>
       </div>
-      <h4>견종 (기본 모습)</h4>
-      <div className="tabs wrap">{BREED_IDS.map((b) => (<button type="button" key={b} className={'tab' + (d.breed === b ? ' on' : '')} onClick={() => setD((o) => breedProfile(b, o.name))}>{BREEDS[b].icon} {BREEDS[b].label}</button>))}</div>
+      <h4>{d.kind === 'cat' ? '묘종 (기본 모습)' : '견종 (기본 모습)'}</h4>
+      <div className="tabs wrap">
+        {d.kind === 'cat'
+          ? CAT_BREED_IDS.map((b) => (<button type="button" key={b} className={'tab' + (d.catBreed === b ? ' on' : '')} onClick={() => setD((o) => catProfile(b, o.name))}>{CAT_BREEDS[b].icon} {CAT_BREEDS[b].label}</button>))
+          : BREED_IDS.map((b) => (<button type="button" key={b} className={'tab' + (d.breed === b ? ' on' : '')} onClick={() => setD((o) => breedProfile(b, o.name))}>{BREEDS[b].icon} {BREEDS[b].label}</button>))}
+      </div>
       <h4>털 색</h4>
       <ColorRow label="기본색" v={d.coat} on={(c) => up({ coat: c })} />
       <ColorRow label="포인트색" v={d.accent} on={(c) => up({ accent: c })} />
@@ -252,13 +257,18 @@ export function PetEditor({ d, setD, photoUrl }: { d: PetProfile; setD: React.Di
       {chip(PATTERNS, d.pattern, (v) => up({ pattern: v }))}
       <h4>털 느낌</h4>
       {chip(STYLES, d.coatStyle, (v) => up({ coatStyle: v }))}
-      <h4>귀</h4>
-      {chip(EARS, d.ears, (v) => up({ ears: v }))}
-      <h4>꼬리</h4>
-      {chip(TAILS, d.tail, (v) => up({ tail: v }))}
+      {/* cats have their own ears and a single tail: the dog ear and tail shapes do not apply to them */}
+      {d.kind !== 'cat' && (<>
+        <h4>귀</h4>
+        {chip(EARS, d.ears, (v) => up({ ears: v }))}
+        <h4>꼬리</h4>
+        {chip(TAILS, d.tail, (v) => up({ tail: v }))}
+      </>)}
       <h4>특징 표시 (우리 아이만의 점·무늬)</h4>
       <div className="tabs wrap">
-        {toggle('socks', '🧦 양말(하얀 발)')}{toggle('blaze', '⚪ 얼굴 하얀 줄')}{toggle('tailTip', '꼬리 끝 하얀색')}{toggle('browDots', '눈썹 점')}
+        {d.kind === 'cat'
+          ? <>{toggle('socks', '🐾 하얀 발')}{toggle('tailTip', '꼬리 끝 하얀색')}</>
+          : <>{toggle('socks', '🧦 양말(하얀 발)')}{toggle('blaze', '⚪ 얼굴 하얀 줄')}{toggle('tailTip', '꼬리 끝 하얀색')}{toggle('browDots', '눈썹 점')}</>}
       </div>
       <div className="paintbox">
         <button type="button" className={'btn small' + (paint.on ? ' primary' : '')} onClick={() => setPaint((p) => ({ ...p, on: !p.on }))}>{paint.on ? '✏️ 점 찍는 중 (끄기)' : '✏️ 점 찍기 켜기'}</button>
